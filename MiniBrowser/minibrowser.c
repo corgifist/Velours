@@ -45,13 +45,23 @@ void da_test(void) {
 
 int main(void) {
 	SetConsoleOutputCP(CP_UTF8);
-	da_test();
+	// da_test();
 
 	VlXML test;
-	// printf("%s\n", test_xml);
 	if (vl_xml_open(&test, test_xml) != VL_SUCCESS) {
 		printf("failed to open test_xml!");
 		return VL_ERROR;
 	}
+
+	const char* emoji = "🤤";
+	printf("original codepoint: %s\n", emoji);
+	int len;
+	uint32_t codepoint = utf8_decode(&emoji, &len);
+	utf8_dump_codepoint(codepoint);
+	printf("\n");
+	char rawEmoji[4];
+	len = utf8_encode(codepoint, (unsigned char*) rawEmoji);
+	printf("reencoded codepoint: %.*s\n", len, rawEmoji);
+
 	return VL_SUCCESS;
 }

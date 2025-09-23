@@ -22,6 +22,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 	while ((cp = utf8_decode(&c, &len))) {
 		printf("%.*s", len, c - len);
 	}
+	printf("\n");
 
 	return VL_SUCCESS;
 }
