@@ -1,58 +1,57 @@
-#include "velours.h"
-#include <Windows.h>
+﻿#include "velours.h"
+#include "da.h"
+#include "xml/xml.h"
+#include "utf8.h"
+#include <windows.h>
 
-const wchar_t CLASS_NAME[] = L"VelourWindowClass";
+#include <stdio.h>
 
-LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+const char* test_xml = VL_STRINGIFY_VARIADIC(
+<?xml version="1.0"?>
+<Контент></Контент>
+);
 
-int WINAPI wWinMain(
-	_In_ HINSTANCE hInstance, 
-	_In_opt_ HINSTANCE hPrevInstance, 
-	_In_ PWSTR pCmdLine, 
-	_In_ int nCmdShow) {
-	greet();
+void da_test(void) {
+	int *test;
+	VL_DA_ALLOC(test, int);
+	printf("%p\n", test);
 
-	WNDCLASS wc = { 0 };
-	wc.lpfnWndProc = WinProc;
-	wc.hInstance = hInstance;
-	wc.lpszClassName = CLASS_NAME;
+	VL_DA_APPEND_CONST(test, int, 34);
+	VL_DA_APPEND_CONST(test, int, 35);
+	VL_DA_APPEND_CONST(test, int, 69);
+	VL_DA_APPEND_CONST(test, int, 84);
+	VL_DA_APPEND_CONST(test, int, 67);
+	VL_DA_APPEND_CONST(test, int, 666);
+	VL_DA_APPEND_CONST(test, int, 782);
 
-	RegisterClass(&wc);
-
-	HWND hwnd = CreateWindowEx(
-		0,
-		CLASS_NAME, 
-		L"Velours",
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		NULL, NULL, hInstance, NULL
-	);
-
-	if (hwnd == NULL) {
-		return 1;
+	VL_DA_FOREACH(test, i) {
+		printf("%zu: %i\n", i, test[i]);
 	}
 
-	ShowWindow(hwnd, nCmdShow);
+	VL_DA_DUMP_HEADER(test);
 
-	MSG msg = { 0 };
-	while (GetMessage(&msg, hwnd, 0, 0) > 0) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+	printf("=====================\n");
+
+	while (VL_DA_LENGTH(test) != 0) {
+		VL_DA_DELETE(test, 0);
+		VL_DA_DUMP_HEADER(test);
 	}
-
-	return 0;
+	   
+	/* while (VL_DA_HEADER(test)->count != 0) {
+		VL_DA_DELETE(test, 0);
+		VL_DA_DUMP_HEADER(test);
+	} */
 }
 
-LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	switch (uMsg) {
-	case WM_DESTROY: {
-		PostQuitMessage(0);
-		return 0;
-	}
-	case WM_PAINT: {
-		return 0;
-	}
-	}
+int main(void) {
+	SetConsoleOutputCP(CP_UTF8);
+	da_test();
 
-	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+	VlXML test;
+	// printf("%s\n", test_xml);
+	if (vl_xml_open(&test, test_xml) != VL_SUCCESS) {
+		printf("failed to open test_xml!");
+		return VL_ERROR;
+	}
+	return VL_SUCCESS;
 }
