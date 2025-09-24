@@ -111,6 +111,22 @@ size_t utf8_strlen(const char* s) {
     return count;
 }
 
+// advances given utf-8 encoded string by given amount of characters
+// do not use if you care about performance!
+// usage:
+//     const char *s = u8"Привет, мир!";
+//     printf("%s\n", s); | => "Привет, мир!"
+//     utf8_advance(&s, 3);
+//     printf("%s\n", s); | => "вет, мир!"
+static size_t utf8_advance(const char **s, size_t count) {
+    size_t skipped = 0;
+    while (count > skipped) {
+        utf8_decode(s, NULL);
+        skipped++;
+    }
+    return skipped;
+}
+
 static void utf8_dump_codepoint(uint32_t cp) {
     if (cp > 0x10FFFF) cp = 0xFFFD;
 

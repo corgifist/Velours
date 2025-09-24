@@ -31,30 +31,32 @@ typedef struct {
 
 #define VL_DA_LENGTH(VAR) (VL_DA_HEADER(VAR)->count)
 
-#define VL_DA_ALLOC(VAR, T) \
+#define VL_DA_ALLOC_WITH_ELEMENT_SIZE(VAR, SIZE) \
 	do { \
-		VAR = malloc(sizeof(T) * (VL_DA_DEFAULT_CAPACITY) + sizeof(VlDAHeader)); \
+		VAR = malloc(SIZE * (VL_DA_DEFAULT_CAPACITY) + sizeof(VlDAHeader)); \
 		if (!VAR) { \
-			printf("malloc from VL_DA_ALLOC(%s, %s) has returned NULL.\nall we have to do is just wait until the program segfaults :)\n", #VAR, #T); \
+			printf("malloc from VL_DA_ALLOC_WITH_ELEMENT_SIZE(%s, %zu) has returned NULL.\nall we have to do is just wait until the program segfaults :)\n", #VAR, SIZE); \
 		} \
-		((VlDAHeader*) VAR)->element_size = sizeof(T); \
+		((VlDAHeader*) VAR)->element_size = SIZE; \
 		((VlDAHeader*) VAR)->count = 0; \
 		((VlDAHeader*) VAR)->cap = VL_DA_DEFAULT_CAPACITY; \
-		VAR = (T*) ((char*) VAR + sizeof(VlDAHeader)); \
+		VAR = (void*) ((char*) VAR + sizeof(VlDAHeader)); \
 	} while (0)
+
+#define VL_DA_ALLOC(VAR, T) VL_DA_ALLOC_WITH_ELEMENT_SIZE(VAR, sizeof(T))
 
 #define VL_DA_APPEND(VAR, ELEMENT) \
 	do { \
 		VlDAHeader *header = VL_DA_HEADER(VAR); \
 		if (header->count + 1 > header->cap) { \
 			header->cap *= 2; \
-			VAR = realloc((char*) VAR - sizeof(VlDAHeader), header->element_size * (header->cap) + sizeof(VlDAHeader)); \
+			VAR = (void*) ((char*) realloc(header, header->element_size * header->cap + sizeof(VlDAHeader)) + sizeof(VlDAHeader)); \
 			if (!VAR) { \
 				printf("realloc from VL_DA_APPEND(%s, %s) has returned NULL.\nall we have to do is just wait until the program segfaults :)\n", #VAR, #ELEMENT); \
 			} \
-			header = (VlDAHeader*) (((char*) VAR) - sizeof(VlDAHeader)); \
+			header = VL_DA_HEADER(VAR); \
 		} \
-		memcpy((((char*) header) + sizeof(VlDAHeader) + header->element_size * header->count), &(ELEMENT), header->element_size); \
+		memcpy((char*) VAR + header->element_size * header->count, &(ELEMENT), header->element_size); \
 		header->count++; \
 	} while (0)
 
@@ -86,8 +88,29 @@ typedef struct {
 		} \
 	} while (0)
 
+#define VL_DA_DESTROY(VAR) \
+	do { \
+		if (!VAR) break; \
+		free(VL_DA_HEADER(VAR)); \
+		VAR = NULL; \
+	} while (0)
+
+#define VL_DA_RESET(VAR) \
+	do { \
+		size_t element_size = VL_DA_HEADER(VAR)->element_size; \
+		VL_DA_DESTROY(VAR); \
+		VL_DA_ALLOC_WITH_ELEMENT_SIZE(VAR, element_size); \
+	} while (0)
+
 #define VL_DA_FOREACH(VAR, I) \
 	for (size_t I = 0; I < VL_DA_LENGTH(VAR); I++)
+
+#define VL_DA_INDIRECT(PTR, ACTION) \
+	do { \
+		void *INDIRECT = *PTR; \
+		ACTION; \
+		*PTR = INDIRECT; \
+	} while (0)
 
 #define VL_DA_DUMP_HEADER(DA) \
 	do { \

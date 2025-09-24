@@ -6,41 +6,19 @@
 
 #include <stdio.h>
 
-const char* test_xml = VL_STRINGIFY_VARIADIC(
-<?xml version="1.0"?>
-<Контент></Контент>
-);
+const char *test_xml = "    " VL_STRINGIFY_VARIADIC(
+<abc property1="Hello, Мир! Пока, мир" property2="4.512 + три целых четырнадцать сотых"></abc>
+) "    ";
 
 void da_test(void) {
 	int *test;
 	VL_DA_ALLOC(test, int);
 	printf("%p\n", test);
 
-	VL_DA_APPEND_CONST(test, int, 34);
-	VL_DA_APPEND_CONST(test, int, 35);
-	VL_DA_APPEND_CONST(test, int, 69);
-	VL_DA_APPEND_CONST(test, int, 84);
-	VL_DA_APPEND_CONST(test, int, 67);
-	VL_DA_APPEND_CONST(test, int, 666);
-	VL_DA_APPEND_CONST(test, int, 782);
-
-	VL_DA_FOREACH(test, i) {
-		printf("%zu: %i\n", i, test[i]);
-	}
-
-	VL_DA_DUMP_HEADER(test);
-
-	printf("=====================\n");
-
-	while (VL_DA_LENGTH(test) != 0) {
-		VL_DA_DELETE(test, 0);
+	for (int i = 0; i < 10000; i++) {
+		VL_DA_APPEND_CONST(test, int, i);
 		VL_DA_DUMP_HEADER(test);
 	}
-	   
-	/* while (VL_DA_HEADER(test)->count != 0) {
-		VL_DA_DELETE(test, 0);
-		VL_DA_DUMP_HEADER(test);
-	} */
 }
 
 int main(void) {
@@ -48,20 +26,11 @@ int main(void) {
 	// da_test();
 
 	VlXML test;
+	VL_UNUSED(test);
 	if (vl_xml_open(&test, test_xml) != VL_SUCCESS) {
 		printf("failed to open test_xml!");
 		return VL_ERROR;
 	}
-
-	const char* emoji = "🤤";
-	printf("original codepoint: %s\n", emoji);
-	int len;
-	uint32_t codepoint = utf8_decode(&emoji, &len);
-	utf8_dump_codepoint(codepoint);
-	printf("\n");
-	char rawEmoji[4];
-	len = utf8_encode(codepoint, (unsigned char*) rawEmoji);
-	printf("reencoded codepoint: %.*s\n", len, rawEmoji);
 
 	return VL_SUCCESS;
 }

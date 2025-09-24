@@ -24,11 +24,11 @@
 #define VL_SUCCESS 0
 #define VL_ERROR 1
 
-#define VL_UNUSED(x) ((void*) x);
+#define VL_UNUSED(x) ((void*) &x);
 
-#define VL_STRINGIFY_EXPAND(X) #X
-#define VL_STRINGIFY(X) VL_STRINGIFY_EXPAND(X)
-#define VL_STRINGIFY_VARIADIC(...) VL_STRINGIFY(__VA_ARGS__)
+#define VL_STRINGIFY(X) u8#X
+#define VL_STRINGIFY_EXPAND(X) VL_STRINGIFY(X)
+#define VL_STRINGIFY_VARIADIC(...) VL_STRINGIFY_EXPAND(__VA_ARGS__)
 
 typedef char VlResult;
 

@@ -4,10 +4,15 @@
 #include "velours.h"
 #include "da.h"
 
-struct VlXMLNode {
-	const char *title;
+typedef struct {
+	VL_DA(char) name;
+	VL_DA(char) value;
+} VlXMLAttribute;
 
-	size_t count;
+struct VlXMLNode {
+	const char *name;
+
+	VL_DA(VlXMLAttribute) attributes;
 	VL_DA(struct VlXMLNode) nodes;
 };
 
