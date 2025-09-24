@@ -29,13 +29,14 @@ typedef struct {
 
 #define VL_DA_HEADER(VAR) ((VlDAHeader*) (((char*) VAR) - sizeof(VlDAHeader)))
 
-#define VL_DA_LENGTH(VAR) (VL_DA_HEADER(VAR)->count)
+#define VL_DA_LENGTH(VAR) (VAR ? VL_DA_HEADER(VAR)->count : 0)
 
 #define VL_DA_ALLOC_WITH_ELEMENT_SIZE(VAR, SIZE) \
 	do { \
 		VAR = malloc(SIZE * (VL_DA_DEFAULT_CAPACITY) + sizeof(VlDAHeader)); \
 		if (!VAR) { \
-			printf("malloc from VL_DA_ALLOC_WITH_ELEMENT_SIZE(%s, %zu) has returned NULL.\nall we have to do is just wait until the program segfaults :)\n", #VAR, SIZE); \
+			printf("malloc from VL_DA_ALLOC_WITH_ELEMENT_SIZE(%s, %zu) has returned NULL", #VAR, SIZE); \
+			break; \
 		} \
 		((VlDAHeader*) VAR)->element_size = SIZE; \
 		((VlDAHeader*) VAR)->count = 0; \
@@ -52,7 +53,8 @@ typedef struct {
 			header->cap *= 2; \
 			VAR = (void*) ((char*) realloc(header, header->element_size * header->cap + sizeof(VlDAHeader)) + sizeof(VlDAHeader)); \
 			if (!VAR) { \
-				printf("realloc from VL_DA_APPEND(%s, %s) has returned NULL.\nall we have to do is just wait until the program segfaults :)\n", #VAR, #ELEMENT); \
+				printf("realloc from VL_DA_APPEND(%s, %s) has returned NULL", #VAR, #ELEMENT); \
+				break; \
 			} \
 			header = VL_DA_HEADER(VAR); \
 		} \
@@ -71,7 +73,8 @@ typedef struct {
 		VlDAHeader *header = VL_DA_HEADER(VAR); \
 		size_t index = (I); \
 		if (header->count == 0 || index >= header->count) { \
-			printf("invalid index in VL_DA_DELETE(%s, %s).\nall we have to do is just wait until the program segfaults :)\n", #VAR, #I); \
+			printf("invalid index in VL_DA_DELETE(%s, %s), ignoring", #VAR, #I); \
+			break; \
 		} \
 		header->count--; \
 		for (size_t i = index; i < header->count; i++) { \
@@ -80,7 +83,8 @@ typedef struct {
 		if (header->count <= header->cap / 2) { \
 			VAR = realloc((char*) VAR - sizeof(VlDAHeader), header->cap / 2 * header->element_size + sizeof(VlDAHeader)); \
 			if (!VAR) { \
-				printf("realloc in VL_DA_DELETE(%s, %s) has returned NULL.\nall we have to do is just wait until the program segfaults :)\n", #VAR, #I); \
+				printf("realloc in VL_DA_DELETE(%s, %s) has returned NULL", #VAR, #I); \
+				break; \
 			} \
 			header = (VlDAHeader*) VAR; \
 			header->cap /= 2; \
@@ -107,6 +111,7 @@ typedef struct {
 
 #define VL_DA_INDIRECT(PTR, ACTION) \
 	do { \
+		if (!PTR) break; \
 		void *INDIRECT = *PTR; \
 		ACTION; \
 		*PTR = INDIRECT; \
@@ -114,6 +119,7 @@ typedef struct {
 
 #define VL_DA_DUMP_HEADER(DA) \
 	do { \
+		if (!DA) break; \
 		VlDAHeader *header = VL_DA_HEADER(DA); \
 		printf("VL_DA_DUMP_HEADER(%s):\n", #DA); \
 		printf("\telement_size: %zu\n", header->element_size); \

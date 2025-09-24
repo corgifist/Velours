@@ -7,6 +7,7 @@
 #define COLLECTING_PROPERTY_VALUE 3
 
 typedef struct {
+	const char *source;
 	size_t pos, line, len;
 
 	VL_DA(char) node_name;
@@ -20,10 +21,11 @@ typedef struct {
 	int len;
 } VlXMLParserSymbol;
 
-static VlResult vl_xml_parser_open(VlXMLParser* parser, VlXML* xml) {
+static VlResult vl_xml_parser_open(VlXMLParser* parser, const char *source) {
 	parser->pos = 0;
 	parser->line = 1;
-	parser->len = utf8_strlen(xml->source);
+	parser->source = source;
+	parser->len = utf8_strlen(parser->source);
 	parser->node_name = NULL;
 	parser->property_name = NULL;
 	parser->state = COLLECTING_NOTHING;
@@ -36,7 +38,7 @@ static VlResult vl_xml_parser_open(VlXMLParser* parser, VlXML* xml) {
 }
 
 static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, VlXML *xml) {
-	const char *p = xml->source;
+	const char *p = parser->source;
 	utf8_advance(&p, parser->pos);
 
 	int len;
@@ -122,13 +124,52 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 	return VL_SUCCESS;
 }
 
-VL_API VlResult vl_xml_open(VlXML *xml, const char *source) {
-	xml->source = source;
+VL_API VlResult vl_xml_attribute_new(VlXMLAttribute *attribute) {
+	VL_DA_ALLOC(attribute->name, char);
+	if (!attribute->name) return VL_ERROR;
+
+	VL_DA_ALLOC(attribute->value, char);
+	if (!attribute->value) {
+		VL_DA_DESTROY(attribute->name);
+		return VL_ERROR;
+	}
+
+	return VL_SUCCESS;
+}
+
+VL_API VlResult vl_xml_attribute_free(VlXMLAttribute *attribute) {
+	VL_DA_DESTROY(attribute->name);
+	VL_DA_DESTROY(attribute->value);
+
+	return attribute->name && attribute->value;
+}
+
+VL_API VlResult vl_xml_node_new(VlXMLNode *node) {
+	node->name = NULL;
+
+	VL_DA_ALLOC(node->attributes, VlXMLAttribute);
+	VL_DA_ALLOC(node->children, struct VlXMLNode);
+
+	return !(node->attributes && node->children);
+}
+
+VL_API VlResult vl_xml_node_free(VlXMLNode *node) {
+	node->name = NULL;
+
+	VL_DA_DESTROY(node->attributes);
+	VL_DA_DESTROY(node->children);
+
+	return VL_SUCCESS;
+}
+
+VL_API VlResult vl_xml_new(VlXML *xml, const char *source) {
 	xml->version = NULL;
 	xml->encoding = NULL;
 
+	vl_xml_node_new(&xml->root);
+
 	VlXMLParser parser;
-	vl_xml_parser_open(&parser, xml);
+	vl_xml_parser_open(&parser, source);
 
 	if (vl_xml_parser_parse_node(&xml->root, &parser, xml)) {
 		return VL_ERROR;

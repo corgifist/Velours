@@ -27,7 +27,7 @@ int main(void) {
 
 	VlXML test;
 	VL_UNUSED(test);
-	if (vl_xml_open(&test, test_xml) != VL_SUCCESS) {
+	if (vl_xml_new(&test, test_xml)) {
 		printf("failed to open test_xml!");
 		return VL_ERROR;
 	}
