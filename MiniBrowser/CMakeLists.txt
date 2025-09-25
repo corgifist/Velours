@@ -16,5 +16,5 @@ if(WIN32)
 	# /WX     - treat all warnings as errors, the code should be perfect 
 	# /wd5040 - disable Spectre migitations warning, they're pretty annoying and useless
 
-	target_compile_options(MiniBrowser PRIVATE /utf-8 /Wall /WX /wd5045)
+	target_compile_options(MiniBrowser PRIVATE /utf-8 /Wall /WX /wd5045 /wd4820)
 endif()

@@ -31,11 +31,11 @@ typedef struct {
 
 #define VL_DA_LENGTH(VAR) (VAR ? VL_DA_HEADER(VAR)->count : 0)
 
-#define VL_DA_ALLOC_WITH_ELEMENT_SIZE(VAR, SIZE) \
+#define VL_DA_NEW_WITH_ELEMENT_SIZE(VAR, SIZE) \
 	do { \
 		VAR = malloc(SIZE * (VL_DA_DEFAULT_CAPACITY) + sizeof(VlDAHeader)); \
 		if (!VAR) { \
-			printf("malloc from VL_DA_ALLOC_WITH_ELEMENT_SIZE(%s, %zu) has returned NULL", #VAR, SIZE); \
+			printf("malloc from VL_DA_NEW_WITH_ELEMENT_SIZE(%s, %zu) has returned NULL", #VAR, SIZE); \
 			break; \
 		} \
 		((VlDAHeader*) VAR)->element_size = SIZE; \
@@ -44,7 +44,7 @@ typedef struct {
 		VAR = (void*) ((char*) VAR + sizeof(VlDAHeader)); \
 	} while (0)
 
-#define VL_DA_ALLOC(VAR, T) VL_DA_ALLOC_WITH_ELEMENT_SIZE(VAR, sizeof(T))
+#define VL_DA_NEW(VAR, T) VL_DA_NEW_WITH_ELEMENT_SIZE(VAR, sizeof(T))
 
 #define VL_DA_APPEND(VAR, ELEMENT) \
 	do { \
@@ -92,7 +92,7 @@ typedef struct {
 		} \
 	} while (0)
 
-#define VL_DA_DESTROY(VAR) \
+#define VL_DA_FREE(VAR) \
 	do { \
 		if (!VAR) break; \
 		free(VL_DA_HEADER(VAR)); \
@@ -102,8 +102,8 @@ typedef struct {
 #define VL_DA_RESET(VAR) \
 	do { \
 		size_t element_size = VL_DA_HEADER(VAR)->element_size; \
-		VL_DA_DESTROY(VAR); \
-		VL_DA_ALLOC_WITH_ELEMENT_SIZE(VAR, element_size); \
+		VL_DA_FREE(VAR); \
+		VL_DA_NEW_WITH_ELEMENT_SIZE(VAR, element_size); \
 	} while (0)
 
 #define VL_DA_FOREACH(VAR, I) \

@@ -88,6 +88,7 @@ static int utf8_encode(uint32_t cp, unsigned char *out) {
 }
 
 size_t utf8_strlen(const char* s) {
+    if (!s) return 0;
     size_t count = 0;
     const unsigned char* p = (const unsigned char*)s;
 
