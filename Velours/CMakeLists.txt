@@ -17,7 +17,7 @@ endif()
 
 if(WIN32)
 	target_compile_definitions(Velours PRIVATE PROPERTIES UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
-	target_compile_options(Velours PRIVATE /utf-8 /Wall /WX /wd4820)
+	target_compile_options(Velours PRIVATE /utf-8 /Wall /WX /wd4820 /wd5045)
 endif()
 
 target_include_directories(Velours PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
