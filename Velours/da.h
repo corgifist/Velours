@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "memory.h"
+
 typedef struct {
 	size_t element_size, count, cap;
 } VlDAHeader;
@@ -33,7 +35,7 @@ typedef struct {
 
 #define VL_DA_NEW_WITH_ELEMENT_SIZE(VAR, SIZE) \
 	do { \
-		VAR = malloc(SIZE * (VL_DA_DEFAULT_CAPACITY) + sizeof(VlDAHeader)); \
+		VAR = VL_MALLOC(SIZE * (VL_DA_DEFAULT_CAPACITY) + sizeof(VlDAHeader)); \
 		if (!VAR) { \
 			printf("malloc from VL_DA_NEW_WITH_ELEMENT_SIZE(%s, %zu) has returned NULL", #VAR, SIZE); \
 			break; \
@@ -51,7 +53,7 @@ typedef struct {
 		VlDAHeader *header = VL_DA_HEADER(VAR); \
 		if (header->count + 1 > header->cap) { \
 			header->cap *= 2; \
-			VAR = (void*) ((char*) realloc(header, header->element_size * header->cap + sizeof(VlDAHeader)) + sizeof(VlDAHeader)); \
+			VAR = (void*) ((char*) VL_REALLOC(header, header->element_size * header->cap + sizeof(VlDAHeader)) + sizeof(VlDAHeader)); \
 			if (!VAR) { \
 				printf("realloc from VL_DA_APPEND(%s, %s) has returned NULL", #VAR, #ELEMENT); \
 				break; \
@@ -81,7 +83,7 @@ typedef struct {
 			memcpy(VAR + i, VAR + i + 1, header->element_size); \
 		} \
 		if (header->count <= header->cap / 2) { \
-			VAR = realloc((char*) VAR - sizeof(VlDAHeader), header->cap / 2 * header->element_size + sizeof(VlDAHeader)); \
+			VAR = VL_REALLOC((char*) VAR - sizeof(VlDAHeader), header->cap / 2 * header->element_size + sizeof(VlDAHeader)); \
 			if (!VAR) { \
 				printf("realloc in VL_DA_DELETE(%s, %s) has returned NULL", #VAR, #I); \
 				break; \
@@ -95,7 +97,7 @@ typedef struct {
 #define VL_DA_FREE(VAR) \
 	do { \
 		if (!VAR) break; \
-		free(VL_DA_HEADER(VAR)); \
+		VL_FREE(VL_DA_HEADER(VAR)); \
 		VAR = NULL; \
 	} while (0)
 

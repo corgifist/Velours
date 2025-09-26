@@ -64,7 +64,7 @@ VL_API VlResult vl_xml_node_free(VlXMLNode* node);
 //     vl_xml_node_dump(&xml->root, 0);
 VL_API void vl_xml_node_dump(VlXMLNode *node, int indent);
 
-// void vl_xml_node_dump_recursive(VlXMLNode *node);
+// void vl_xml_node_dump_recursive(VlXMLNode *node)
 // dumps given node to stdout in a recursive manner
 // under the hood this function utilizes vl_xml_node_dump
 // 
@@ -72,7 +72,7 @@ VL_API void vl_xml_node_dump(VlXMLNode *node, int indent);
 // usage: same as vl_xml_node_dump
 VL_API void vl_xml_node_dump_recursive(VlXMLNode *node, int indent);
 
-// vl_xml_new(VlXML *xml, const char *source, char *error)
+// VlResult vl_xml_new(VlXML *xml, const char *source, char *error)
 // initialize and parse given string as XML
 // 
 // arguments:
@@ -90,6 +90,10 @@ VL_API void vl_xml_node_dump_recursive(VlXMLNode *node, int indent);
 //         printf("failed to parse xml: %s\n", error);
 //     }
 VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error);
+
+// VlResult vl_xml_free(VlXML *xml)
+// frees given xml object
+VL_API VlResult vl_xml_free(VlXML *xml);
 
 // void vl_xml_dump(VlXML *xml);
 // this function is an alias to vl_xml_node_dump_recursive(&xml->root);

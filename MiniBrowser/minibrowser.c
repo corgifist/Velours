@@ -4,6 +4,8 @@
 #include "utf8.h"
 #include <windows.h>
 
+#include "memory.h"
+
 #include <stdio.h>
 
 /* const char* test_xml = "    " VL_STRINGIFY_VARIADIC(
@@ -79,13 +81,7 @@
 ) "    "; */
 
 const char* test_xml = VL_STRINGIFY_VARIADIC(
-< ? xml version = "1.0" encoding = "UTF-8" ? >
-<!-- Testing comments -->
-<ordinary>
-<omg value="omg"/>
-<!-- Testing comments part two -->
-<omg value="omg2"/ >
-</ordinary>
+<hello />
 );
 
 void da_test(void) {
@@ -103,16 +99,26 @@ int main(void) {
 	SetConsoleOutputCP(CP_UTF8);
 	// da_test();
 
-	VlXML test;
-	char error[512];
-	VL_UNUSED(test);
-	VlResult end_result = vl_xml_new(&test, test_xml, error);
-	if (end_result) {
-		printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
-		return VL_ERROR;
-	}
+    printf("initial memory usage: %zu\n", vl_get_memory_usage());
 
-    vl_xml_dump(&test, 0);
+    while (1) {
+        VlXML test;
+        char error[512];
+        VL_UNUSED(test);
+        VlResult end_result = vl_xml_new(&test, test_xml, error);
+        printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+        if (end_result) {
+            printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
+            return VL_ERROR;
+        }
+
+        vl_xml_dump(&test, 0);
+
+        vl_xml_free(&test);
+
+        printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
+        break;
+    }
 
 	return VL_SUCCESS;
 }

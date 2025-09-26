@@ -16,11 +16,6 @@ typedef struct {
 	char state;
 } VlXMLParser;
 
-typedef struct {
-	uint32_t codepoint;
-	int len;
-} VlXMLParserSymbol;
-
 #define VL_EXPECTED_CLOSING_TAG 2
 #define VL_SKIP_TAG 3
 #define VL_SPECIAL_TAG 4
@@ -116,7 +111,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 	ADVANCE();
 	parser->state = COLLECTING_NODE_NAME;
 
-	char parse_child_nodes = 1;
+	char parse_child_nodes = 0;
 	char block_attributes = 0;
 	char expecting_closing_tag = 0;
 	char encountered_attributes = 0;
@@ -162,10 +157,11 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		}
 
 		if (USELESS(codepoint) && parser->state != COLLECTING_PROPERTY_VALUE) {
-			if (parser->state == COLLECTING_NODE_NAME && VL_DA_LENGTH(parser->node_name) > 0) {
+			if (parser->state == COLLECTING_NODE_NAME && VL_DA_LENGTH(parser->node_name)) {
 				parser->state = COLLECTING_PROPERTY_NAME;
 				VL_DA_APPEND_CONST(parser->node_name, char, 0);
 				node->name = parser->node_name;
+				VL_DA_NEW(parser->node_name, char);
 				// printf("node name: '%s'\n", node->name);
 				encountered_name = 1;
 			}
@@ -210,6 +206,11 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 			continue;
 		}
 
+		if (codepoint == '"' && parser->state != COLLECTING_PROPERTY_VALUE) {
+			APPEND_ERROR("unexpected \" at line %zu", parser->line);
+			return VL_ERROR;
+		}
+
 		if (codepoint == '"' && parser->state == COLLECTING_PROPERTY_VALUE) {
 			VL_DA_APPEND_CONST(parser->property_value, char, 0);
 			// printf("property value: \"%s\"\n", parser->property_value);
@@ -233,12 +234,15 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 
 		if (codepoint == '=' && parser->state == COLLECTING_PROPERTY_NAME) {
 			parser->state = COLLECTING_PROPERTY_VALUE;
+			if (VL_DA_LENGTH(parser->property_name) <= 0) {
+				APPEND_ERROR("invalid property name at line %zu", parser->line);
+				return VL_ERROR;
+			}
 			VL_DA_APPEND_CONST(parser->property_name, char, 0);
 			// printf("property name: \"%s\"\n", parser->property_name);
 			ADVANCE();
 			while (codepoint != '"') ADVANCE();
 			ADVANCE();
-			parser->state = COLLECTING_PROPERTY_VALUE;
 			expect_full_expression = 1;
 			continue;
 		}
@@ -276,9 +280,10 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		return VL_SKIP_TAG;
 	}
 
-	if (VL_DA_LENGTH(node->name) == 0) {
+	if (!VL_DA_LENGTH(node->name)) {
 		VL_DA_APPEND_CONST(parser->node_name, char, 0);
 		node->name = parser->node_name;
+		VL_DA_NEW(parser->node_name, char);
 		// printf("node name: '%s'\n", node->name);
 	}
 
@@ -302,18 +307,6 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		parser->pos = child_parser.pos;
 		parser->line = parser->line;
 		p = parser->source;
-		if (parse_result == VL_ERROR) {
-			vl_xml_parser_free(&child_parser);
-			vl_xml_node_free(&child);
-			// printf("%s\n", child_error);
-			return VL_ERROR;
-		}
-
-		if (parse_result == VL_SKIP_TAG) {
-			vl_xml_parser_free(&child_parser);
-			vl_xml_node_free(&child);
-			continue;
-		}
 
 		if (parse_result == VL_EXPECTED_CLOSING_TAG &&
 			(utf8_strlen(node->name) != utf8_strlen(child.name) || strcmp(node->name, child.name) != 0)) {
@@ -323,8 +316,21 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 			return VL_ERROR;
 		}
 
+		vl_xml_parser_free(&child_parser);
+
+		if (parse_result == VL_ERROR) {
+			// printf("%s\n", child_error);
+			vl_xml_node_free(&child);
+			return VL_ERROR;
+		}
+
+		if (parse_result == VL_SKIP_TAG) {
+			vl_xml_node_free(&child);
+			continue;
+		}
+
 		if (parse_result == VL_EXPECTED_CLOSING_TAG) {
-			vl_xml_parser_free(&child_parser);
+			vl_xml_node_free(&child);
 			return VL_SUCCESS;
 		}
 
@@ -366,11 +372,19 @@ VL_API VlResult vl_xml_node_new(VlXMLNode *node) {
 	VL_DA_NEW(node->children, struct VlXMLNode);
 	VL_DA_NEW(node->text, char);
 
-	return !(node->attributes && node->children);
+	return !(node->attributes && node->children && node->text);
 }
 
 VL_API VlResult vl_xml_node_free(VlXMLNode *node) {
 	node->name = NULL;
+
+	VL_DA_FOREACH(node->children, i) {
+		vl_xml_node_free(&node->children[i]);
+	}
+
+	VL_DA_FOREACH(node->attributes, i) {
+		vl_xml_attribute_free(&node->attributes[i]);
+	}
 
 	VL_DA_FREE(node->attributes);
 	VL_DA_FREE(node->children);
@@ -410,14 +424,13 @@ VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error) {
 	VL_DA_NEW(xml->pi, VlXMLNode);
 
 	size_t pos = 0, line = 1;
+	VlXMLParser parser;
+	VlXMLNode node;
 
 	while (1) {
-		VlXMLParser parser;
 		vl_xml_parser_new(&parser, source);
 		parser.pos = pos;
 		parser.line = line;
-
-		VlXMLNode node;
 
 		vl_xml_node_new(&node);
 
@@ -426,6 +439,7 @@ VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error) {
 		VlResult result = vl_xml_parser_parse_node(&node, &parser, xml, error, &error_offset);
 		pos = parser.pos;
 		line = parser.line;
+		vl_xml_parser_free(&parser);
 
 		if (result == VL_SUCCESS) {
 			xml->root = node;
@@ -438,7 +452,7 @@ VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error) {
 		vl_xml_node_free(&node);
 		if (result == VL_SKIP_TAG) continue;
 
-		VL_DA_FREE(xml->pi);
+		vl_xml_free(xml);
 		return VL_ERROR;
 	}
 
@@ -446,6 +460,17 @@ VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error) {
 		xml->version = "1.0";
 	if (!xml->encoding)
 		xml->encoding = "UTF-8";
+
+	return VL_SUCCESS;
+}
+
+VL_API VlResult vl_xml_free(VlXML *xml) {
+	VL_DA_FOREACH(xml->pi, i) {
+		vl_xml_node_free(&xml->pi[i]);
+	}
+	VL_DA_FREE(xml->pi);
+
+	vl_xml_node_free(&xml->root);
 
 	return VL_SUCCESS;
 }

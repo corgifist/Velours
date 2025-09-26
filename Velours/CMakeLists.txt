@@ -4,7 +4,10 @@ project(VeloursWebView LANGUAGES C)
 set(Velours_Sources
 	velours.c
 	velours.h
- "utf8.h" "da.h")
+	da.h
+	utf8.h
+	memory.c
+	memory.h)
 
 add_subdirectory(xml)
 
@@ -16,8 +19,10 @@ if(BUILD_SHARED_LIBS)
 endif()
 
 if(WIN32)
-	target_compile_definitions(Velours PRIVATE PROPERTIES UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
+	target_compile_definitions(Velours PRIVATE UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
 	target_compile_options(Velours PRIVATE /utf-8 /Wall /WX /wd4820 /wd5045)
 endif()
+
+target_compile_definitions(Velours PUBLIC VELOURS_MANAGED_MALLOC)
 
 target_include_directories(Velours PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
