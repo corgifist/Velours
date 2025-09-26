@@ -79,6 +79,7 @@
 ) "    "; */
 
 const char* test_xml = VL_STRINGIFY_VARIADIC(
+< ? xml version = "1.0" encoding = "UTF-8" ? >
 <!-- Testing comments -->
 <ordinary>
 <omg value="omg"/>
@@ -98,22 +99,6 @@ void da_test(void) {
 	}
 }
 
-void dump_xml_node(VlXMLNode *node, int indent) {
-	for (int i = 0; i < indent; i++) printf("    ");
-	if (node->is_complex) printf("%s\n", node->name);
-	else printf("text: '%s'\n", node->text);
-
-	VL_DA_FOREACH(node->attributes, i) {
-		VlXMLAttribute* attr = &node->attributes[i];
-		for (int j = 0; j < indent; j++) printf("    ");
-		printf("    %s = \"%s\"\n", attr->name, attr->value);
-	}
-
-	VL_DA_FOREACH(node->children, i) {
-		dump_xml_node(&node->children[i], indent + 1);
-	}
-}
-
 int main(void) {
 	SetConsoleOutputCP(CP_UTF8);
 	// da_test();
@@ -127,7 +112,7 @@ int main(void) {
 		return VL_ERROR;
 	}
 
-	dump_xml_node(&test.root, 0);
+    vl_xml_dump(&test, 0);
 
 	return VL_SUCCESS;
 }

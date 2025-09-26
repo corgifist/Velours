@@ -35,13 +35,42 @@ typedef struct {
 	const char *encoding;
 
 	VlXMLNode root;
+	
+	// pi means processing instructions
+	// processing instruction in xml is an element that looks like:
+	// <?something ... ?>
+	VL_DA(VlXMLNode) pi;
 } VlXML;
 
 VL_API VlResult vl_xml_attribute_new(VlXMLAttribute *attribute);
 VL_API VlResult vl_xml_attribute_free(VlXMLAttribute *attribute);
 
 VL_API VlResult vl_xml_node_new(VlXMLNode *node);
-VL_API VlResult vl_xml_node_free(VlXMLNode *node);
+VL_API VlResult vl_xml_node_free(VlXMLNode* node);
+
+// void vl_xml_node_dump(VlXMLNode *node)
+// dumps given node to stdout (not recursive!!!)
+// 
+// arguments:
+//     node - xml node to dump
+//     indent - indentation level of the output
+//              zero means no additional indentation (default and preferred option),
+//              negative means no indentation at all,
+//              positive means additional indentation
+// 
+// usage:
+//     VlXML xml;
+//     vl_xml_new(&xml, "<abc>...</abc>", NULL);
+//     vl_xml_node_dump(&xml->root, 0);
+VL_API void vl_xml_node_dump(VlXMLNode *node, int indent);
+
+// void vl_xml_node_dump_recursive(VlXMLNode *node);
+// dumps given node to stdout in a recursive manner
+// under the hood this function utilizes vl_xml_node_dump
+// 
+// arguments: same as vl_xml_node_dump 
+// usage: same as vl_xml_node_dump
+VL_API void vl_xml_node_dump_recursive(VlXMLNode *node, int indent);
 
 // vl_xml_new(VlXML *xml, const char *source, char *error)
 // initialize and parse given string as XML
@@ -62,4 +91,14 @@ VL_API VlResult vl_xml_node_free(VlXMLNode *node);
 //     }
 VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error);
 
+// void vl_xml_dump(VlXML *xml);
+// this function is an alias to vl_xml_node_dump_recursive(&xml->root);
+// dumps given xml's object root node (recursively)
+//
+// arguments: same as vl_xml_node_dump_recursive
+// usage:
+//     VlXML xml;
+//     vl_xml_new(&xml, "<abc>...</abc>", NULL);
+//     vl_xml_dump(&xml, 0);
+VL_API void vl_xml_dump(VlXML *xml, int indent);
 #endif
