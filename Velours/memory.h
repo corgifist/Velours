@@ -19,6 +19,10 @@
 
 #include <stdlib.h>
 
+#define VL_MEMORY_NO_LOGGING 0
+#define VL_MEMORY_ONLY_ERRORS 1
+#define VL_MEMORY_ALL 2
+
 #ifndef VELOURS_MANAGED_MALLOC
 #define VL_MALLOC malloc
 #define VL_CALLOC calloc
@@ -38,7 +42,9 @@ VL_API void vl_free(const char* file, size_t line, void* mem);
 	vl_realloc(__FILE__, __LINE__, __VA_ARGS__)
 #define VL_FREE(...) \
 	vl_free(__FILE__, __LINE__, __VA_ARGS__)
-#endif
+#endif // VELOURS_MANAGED_MALLOC
+
+VL_API void vl_memory_set_logging_level(int level);
 
 // returns an APPROXIMATE memory usage in bytes
 VL_API size_t vl_get_memory_usage(void);

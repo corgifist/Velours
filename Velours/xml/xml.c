@@ -111,7 +111,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 	ADVANCE();
 	parser->state = COLLECTING_NODE_NAME;
 
-	char parse_child_nodes = 0;
+	char parse_child_nodes = 1;
 	char block_attributes = 0;
 	char expecting_closing_tag = 0;
 	char encountered_attributes = 0;

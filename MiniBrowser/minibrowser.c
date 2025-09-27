@@ -83,7 +83,29 @@
 ) "    "; */
 
 const char* test_xml =  VL_STRINGIFY_VARIADIC(
-<content property1="First" property2="Two" property3="Three" />
+<?xml version="1.0"?>
+<customers>
+   <customer id="55000">
+      <name>Charter Group</name>
+      <address>
+         <street>100 Main</street>
+         <city>Framingham</city>
+         <state>MA</state>
+         <zip>01701</zip>
+      </address>
+      <address>
+         <street>720 Prospect</street>
+         <city>Framingham</city>
+         <state>MA</state>
+         <zip>01701</zip>
+      </address>
+      <address>
+         <street>120 Ridge</street>
+         <state>MA</state>
+         <zip>01760</zip>
+      </address>
+   </customer>
+</customers>
 );
 
 void da_test(void) {
@@ -184,6 +206,8 @@ void xml_test(void) {
 
 int main(void) {
 	SetConsoleOutputCP(CP_UTF8);
+    vl_memory_set_logging_level(VL_MEMORY_ALL);
+
 	// da_test();
     // ht_test();
     xml_test();
