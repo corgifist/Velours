@@ -212,10 +212,10 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		}
 
 		if (codepoint == '"' && parser->state == COLLECTING_PROPERTY_VALUE) {
-			VL_DA_APPEND_CONST(parser->property_value, char, 0);
 			// printf("property value: \"%s\"\n", parser->property_value);
 			if (!block_attributes) {
 				VlXMLAttribute attribute;
+				VL_DA_APPEND_CONST(parser->property_value, char, 0);
 				attribute.name = parser->property_name;
 				attribute.value = parser->property_value;
 				VL_DA_APPEND(node->attributes, attribute);
@@ -378,13 +378,15 @@ VL_API VlResult vl_xml_node_new(VlXMLNode *node) {
 VL_API VlResult vl_xml_node_free(VlXMLNode *node) {
 	node->name = NULL;
 
-	VL_DA_FOREACH(node->children, i) {
-		vl_xml_node_free(&node->children[i]);
-	}
+	if (node->children)
+		VL_DA_FOREACH(node->children, i) {
+			vl_xml_node_free(&node->children[i]);
+		}
 
-	VL_DA_FOREACH(node->attributes, i) {
-		vl_xml_attribute_free(&node->attributes[i]);
-	}
+	if (node->attributes)
+		VL_DA_FOREACH(node->attributes, i) {
+			vl_xml_attribute_free(&node->attributes[i]);
+		}
 
 	VL_DA_FREE(node->attributes);
 	VL_DA_FREE(node->children);

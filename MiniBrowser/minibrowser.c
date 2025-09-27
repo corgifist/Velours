@@ -1,5 +1,6 @@
 ﻿#include "velours.h"
 #include "da.h"
+#include "ht.h"
 #include "xml/xml.h"
 #include "utf8.h"
 #include <windows.h>
@@ -7,6 +8,7 @@
 #include "memory.h"
 
 #include <stdio.h>
+#include <time.h>
 
 /* const char* test_xml = "    " VL_STRINGIFY_VARIADIC(
 <?xml version="1.0" encoding="UTF-8"?>
@@ -80,25 +82,69 @@
 </catalog>
 ) "    "; */
 
-const char* test_xml = VL_STRINGIFY_VARIADIC(
-<hello />
+const char* test_xml =  VL_STRINGIFY_VARIADIC(
+<content property1="First" property2="Two" property3="Three" />
 );
 
 void da_test(void) {
+    printf("initial memory usage: %zu\n", vl_get_memory_usage());
 	int *test;
 	VL_DA_NEW(test, int);
+    printf("after da creation memory usage: %zu\n", vl_get_memory_usage());
 	printf("%p\n", test);
 
 	for (int i = 0; i < 10000; i++) {
 		VL_DA_APPEND_CONST(test, int, i);
-		VL_DA_DUMP_HEADER(test);
 	}
+
+    printf("peak memory usage: %zu\n", vl_get_memory_usage());
+
+    VL_DA_FREE(test);
+
+    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
 }
 
-int main(void) {
-	SetConsoleOutputCP(CP_UTF8);
-	// da_test();
+void ht_test(void) {
+    printf("initial memory usage: %zu\n", vl_get_memory_usage());
+    VL_HT(int, int) ht;
+    VL_HT_NEW(ht, int, int);
+    printf("after ht creation memory usage: %zu\n", vl_get_memory_usage());
 
+    srand((unsigned int) time(NULL));
+
+    for (int i = 0; i < 1000; i++) {
+        int key = i - 500;
+        int val = i;
+        VL_HT_PUT(ht, key, val);
+    }
+
+    VlHTEntry entry;
+    VL_HT(int, int) iterator_pos = ht;
+    int sum = 0;
+    while (vl_ht_iterate(ht, &iterator_pos, &entry)) {
+        sum += *((int*) entry.value);
+    }
+    printf("sum: %i\n", sum);
+
+    VL_HT_RESET(ht);
+
+    int redefine_test = 0, found = 0;
+    VL_HT_PUT_CONST(ht, int, 69, int, 34);
+    VL_HT_GET_CONST(ht, int, 69, redefine_test, found);
+    printf("value of 69 is %i\n", redefine_test);
+
+    VL_HT_PUT_CONST(ht, int, 69, int, 35);
+    VL_HT_GET_CONST(ht, int, 69, redefine_test, found);
+    printf("value of 69 is %i\n", redefine_test);
+
+    VL_HT_PUT_CONST(ht, int, 69, int, 42);
+    VL_HT_GET_CONST(ht, int, 69, redefine_test, found);
+    printf("value of 69 is %i\n", redefine_test);
+
+    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
+}
+
+void xml_test(void) {
     printf("initial memory usage: %zu\n", vl_get_memory_usage());
 
     while (1) {
@@ -109,7 +155,7 @@ int main(void) {
         printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
         if (end_result) {
             printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
-            return VL_ERROR;
+            return;
         }
 
         vl_xml_dump(&test, 0);
@@ -119,6 +165,14 @@ int main(void) {
         printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
         break;
     }
+}
+
+int main(void) {
+	SetConsoleOutputCP(CP_UTF8);
+	// da_test();
+    ht_test();
+    // xml_test();
+
 
 	return VL_SUCCESS;
 }
