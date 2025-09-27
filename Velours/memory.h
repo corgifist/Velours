@@ -43,4 +43,7 @@ VL_API void vl_free(const char* file, size_t line, void* mem);
 // returns an APPROXIMATE memory usage in bytes
 VL_API size_t vl_get_memory_usage(void);
 
+// dumps every not freed malloc call to stdout
+VL_API void vl_dump_all_allocations(void);
+
 #endif // VELOURS_MEMORY_H

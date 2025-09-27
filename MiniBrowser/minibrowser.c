@@ -118,6 +118,10 @@ void ht_test(void) {
         VL_HT_PUT(ht, key, val);
     }
 
+    printf("\n");
+    vl_dump_all_allocations();
+    printf("\n");
+
     VlHTEntry entry;
     VL_HT(int, int) iterator_pos = ht;
     int sum = 0;
@@ -131,15 +135,25 @@ void ht_test(void) {
     int redefine_test = 0, found = 0;
     VL_HT_PUT_CONST(ht, int, 69, int, 34);
     VL_HT_GET_CONST(ht, int, 69, redefine_test, found);
-    printf("value of 69 is %i\n", redefine_test);
+    if (found) printf("value of 69 is %i\n", redefine_test);
 
     VL_HT_PUT_CONST(ht, int, 69, int, 35);
     VL_HT_GET_CONST(ht, int, 69, redefine_test, found);
-    printf("value of 69 is %i\n", redefine_test);
+    if (found) printf("value of 69 is %i\n", redefine_test);
 
     VL_HT_PUT_CONST(ht, int, 69, int, 42);
     VL_HT_GET_CONST(ht, int, 69, redefine_test, found);
-    printf("value of 69 is %i\n", redefine_test);
+    if (found) printf("value of 69 is %i\n", redefine_test);
+
+    VL_HT_DELETE_CONST(ht, int, 69, found);
+    if (found) printf("deleted successfully!\n");
+    else printf("failed to delete 69\n");
+
+    VL_HT_GET_CONST(ht, int, 69, redefine_test, found);
+    if (found) printf("value of 69 is %i\n", redefine_test);
+    else printf("69 is not found\n");
+
+    VL_HT_FREE(ht);
 
     printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
 }
@@ -163,6 +177,7 @@ void xml_test(void) {
         vl_xml_free(&test);
 
         printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
+        vl_dump_all_allocations();
         break;
     }
 }
@@ -170,8 +185,8 @@ void xml_test(void) {
 int main(void) {
 	SetConsoleOutputCP(CP_UTF8);
 	// da_test();
-    ht_test();
-    // xml_test();
+    // ht_test();
+    xml_test();
 
 
 	return VL_SUCCESS;

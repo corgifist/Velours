@@ -36,6 +36,11 @@ typedef struct {
 //                     ^
 //         VL_HT_NEW returns pointer to here
 
+#pragma warning(push)
+#pragma warning( disable : 6011 )
+#pragma warning( disable : 6001 )
+#pragma warning( disable : 6308 )
+
 #define VL_HT_HEADER(VAR) ((VlHTHeader*) ((char*) (VAR) - sizeof(VlHTHeader)))
 
 #define VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION(VAR, KEY_SIZE, VALUE_SIZE, MALLOC, HASH_FUNCTION) \
@@ -62,18 +67,18 @@ typedef struct {
 
 #define VL_HT_GROW_WITH_ALLOCATOR(VAR, REALLOC) \
 	do { \
-		VlHTHeader *grow_header = VL_HT_HEADER(VAR); \
-		uint64_t entry_size = (sizeof(uint64_t) + sizeof(char) + header->key_size + header->value_size); \
-		size_t old_size = entry_size * grow_header->cap + sizeof(VlHTHeader); \
-		grow_header->cap *= 2; \
-		size_t new_size = entry_size * grow_header->cap + sizeof(VlHTHeader); \
-		grow_header = REALLOC(grow_header, new_size); \
-		if (!grow_header) { \
+		VlHTHeader *__ht_grow_header = VL_HT_HEADER(VAR); \
+		uint64_t __ht_grow_header_entry_size = (sizeof(uint64_t) + sizeof(char) + __ht_grow_header->key_size + __ht_grow_header->value_size); \
+		size_t __ht_grow_header_old_size = __ht_grow_header_entry_size * __ht_grow_header->cap + sizeof(VlHTHeader); \
+		__ht_grow_header->cap *= 2; \
+		size_t __ht_grow_header_new_size = __ht_grow_header_entry_size * __ht_grow_header->cap + sizeof(VlHTHeader); \
+		__ht_grow_header = REALLOC(__ht_grow_header, __ht_grow_header_new_size); \
+		if (!__ht_grow_header) { \
 			printf("realloc in VL_HT_GROW(%s, %s) has returned NULL\n", #VAR, #REALLOC); \
 			break; \
 		} \
-		memset((char*) grow_header + old_size, 0, new_size - old_size); \
-		VAR = (void*) ((char*) grow_header + sizeof(VlHTHeader)); \
+		memset((char*) __ht_grow_header + __ht_grow_header_old_size, 0, __ht_grow_header_new_size - __ht_grow_header_old_size); \
+		VAR = (void*) ((char*) __ht_grow_header + sizeof(VlHTHeader)); \
 	} while (0)
 
 #define VL_HT_GROW(VAR) \
@@ -81,34 +86,41 @@ typedef struct {
 
 #define VL_HT_PUT_WITH_ALLOCATOR(VAR, KEY, VALUE, REALLOC) \
 	do { \
-		VlHTHeader *header = VL_HT_HEADER(VAR); \
-		if (header->count + 1 >= header->cap) { \
+		VlHTHeader *__vl_ht_put_header = VL_HT_HEADER(VAR); \
+		if (__vl_ht_put_header->count + 1 >= __vl_ht_put_header->cap) { \
 			VL_HT_GROW_WITH_ALLOCATOR(VAR, REALLOC); \
-			header = VL_HT_HEADER(VAR); \
+			__vl_ht_put_header = VL_HT_HEADER(VAR); \
 		} \
-		uint64_t hash = header->hash_key(&(KEY)); \
-		size_t index = hash & (header->cap - 1); \
-		while (index < header->cap) { \
-			uint64_t *entry_hash = (uint64_t*) ((char*) VAR + (sizeof(uint64_t) + sizeof(char) + header->key_size + header->value_size) * index); \
-			char *entry_occupied = (char*) entry_hash + sizeof(uint64_t); \
-			void *entry_key = (char*) entry_occupied + sizeof(char); \
-			void *entry_value = (char*) entry_key + header->key_size; \
-			if (!*entry_occupied) { \
-				memcpy(entry_key, &(KEY), header->key_size); \
-				memcpy(entry_value, &(VALUE), header->value_size); \
-				header->count++; \
-				*entry_hash = hash; \
-				*entry_occupied = 1; \
+		uint64_t __vl_ht_put_hash = __vl_ht_put_header->hash_key(&(KEY)); \
+		size_t __vl_ht_put_index = __vl_ht_put_hash & (__vl_ht_put_header->cap - 1); \
+		char __vl_ht_put_second_leap = 0; \
+		while (__vl_ht_put_index < __vl_ht_put_header->cap) { \
+			uint64_t *__vl_ht_entry_hash = (uint64_t*) ((char*) VAR + (sizeof(uint64_t) + sizeof(char) + __vl_ht_put_header->key_size + __vl_ht_put_header->value_size) * __vl_ht_put_index); \
+			char *__vl_ht_entry_occupied = (char*) __vl_ht_entry_hash + sizeof(uint64_t); \
+			void *__vl_ht_entry_key = (char*) __vl_ht_entry_occupied + sizeof(char); \
+			void *__vl_ht_entry_value = (char*) __vl_ht_entry_key + __vl_ht_put_header->key_size; \
+			if (!*__vl_ht_entry_occupied) { \
+				memcpy(__vl_ht_entry_key, &(KEY), __vl_ht_put_header->key_size); \
+				memcpy(__vl_ht_entry_value, &(VALUE), __vl_ht_put_header->value_size); \
+				__vl_ht_put_header->count++; \
+				*__vl_ht_entry_hash = __vl_ht_put_hash; \
+				*__vl_ht_entry_occupied = 1; \
 				break; \
 			} \
 			/* updating already existing hash table entry */ \
-			if (*entry_hash == hash && *entry_occupied) { \
-				memcpy(entry_value, &(VALUE), header->value_size); \
+			if (*__vl_ht_entry_hash == __vl_ht_put_hash && *__vl_ht_entry_occupied) { \
+				memcpy(__vl_ht_entry_value, &(VALUE), __vl_ht_put_header->value_size); \
 				break; \
 			} \
-			/* wrap around the hash table so we can try to find suitable entry one more time */ \
-			if (index + 1 >= header->cap) index = 0; \
-			else index++; \
+			/* wrap around the hash table so we can try to find a suitable entry one more time */ \
+			if (++__vl_ht_put_index >= __vl_ht_put_header->cap) { \
+				if (!__vl_ht_put_second_leap) { \
+					__vl_ht_put_index = 0; \
+					__vl_ht_put_second_leap = 1; \
+				} else { \
+					break; \
+				} \
+			} \
 		} \
 	} while (0)
 
@@ -127,20 +139,49 @@ typedef struct {
 
 #define VL_HT_GET(VAR, KEY, VALUE, FOUND) \
 	do { \
+		VlHTHeader *__vl_ht_get_header = VL_HT_HEADER(VAR); \
+		uint64_t __vl_ht_get_hash = __vl_ht_get_header->hash_key(&(KEY)); \
+		size_t __vl_ht_get_index = __vl_ht_get_hash & (__vl_ht_get_header->cap - 1); \
+		char __vl_ht_get_second_leap = 0; \
+		FOUND = 0; \
+		while (__vl_ht_get_index < __vl_ht_get_header->cap) { \
+			uint64_t *__vl_ht_get_entry_hash = (uint64_t*) ((char*) VAR + (sizeof(uint64_t) + sizeof(char) + __vl_ht_get_header->key_size + __vl_ht_get_header->value_size) * __vl_ht_get_index); \
+			char *__vl_ht_get_entry_occupied = (char*) __vl_ht_get_entry_hash + sizeof(uint64_t); \
+			void *__vl_ht_get_entry_key = (char*) __vl_ht_get_entry_occupied + sizeof(char); \
+			void *__vl_ht_get_entry_value = (char*) __vl_ht_get_entry_key + __vl_ht_get_header->key_size; \
+			/* updating already existing hash table entry */ \
+			if (*__vl_ht_get_entry_hash == __vl_ht_get_hash && *__vl_ht_get_entry_occupied) { \
+				memcpy(&(VALUE), __vl_ht_get_entry_value, __vl_ht_get_header->value_size); \
+				FOUND = 1; \
+				break; \
+			} \
+			/* wrap around the hash table so we can try to find a suitable entry one more time */ \
+			if (++__vl_ht_get_index >= __vl_ht_get_header->cap) { \
+				if (!__vl_ht_get_second_leap) { \
+					__vl_ht_get_index = 0; \
+					__vl_ht_get_second_leap = 1; \
+				} else { \
+					break; \
+				} \
+			} \
+		} \
+	} while (0)
+
+#define VL_HT_DELETE(VAR, KEY, SUCCESS) \
+	do { \
 		VlHTHeader *header = VL_HT_HEADER(VAR); \
 		uint64_t hash = header->hash_key(&(KEY)); \
 		size_t index = hash & (header->cap - 1); \
 		char second_leap = 0; \
-		FOUND = 0; \
+		SUCCESS = 0; \
 		while (index < header->cap) { \
 			uint64_t *entry_hash = (uint64_t*) ((char*) VAR + (sizeof(uint64_t) + sizeof(char) + header->key_size + header->value_size) * index); \
 			char *entry_occupied = (char*) entry_hash + sizeof(uint64_t); \
-			void *entry_key = (char*) entry_occupied + sizeof(char); \
-			void *entry_value = (char*) entry_key + header->key_size; \
 			/* updating already existing hash table entry */ \
 			if (*entry_hash == hash && *entry_occupied) { \
-				memcpy(&(VALUE), entry_value, header->value_size); \
-				FOUND = 1; \
+				memset(entry_hash, 0, (sizeof(uint64_t) + sizeof(char) + header->key_size + header->value_size)); \
+				header->count--; \
+				SUCCESS = 1; \
 				break; \
 			} \
 			/* wrap around the hash table so we can try to find a suitable entry one more time */ \
@@ -153,6 +194,12 @@ typedef struct {
 				} \
 			} \
 		} \
+	} while (0)
+
+#define VL_HT_DELETE_CONST(VAR, KEY_T, KEY, SUCCESS) \
+	do { \
+		KEY_T __ht_delete_const_k = (KEY); \
+		VL_HT_DELETE(VAR, __ht_delete_const_k, SUCCESS); \
 	} while (0)
 
 #define VL_HT_GET_CONST(VAR, KEY_T, KEY, VALUE, FOUND) \
@@ -184,6 +231,8 @@ typedef struct {
 
 #define VL_HT_HASH(T) \
 	VL_API uint64_t vl_ht_hash_##T(void* p)
+
+#pragma warning(pop)
 
 // types like void*, const char* etc. cannot be used in hash tables directly
 // instead of defining hash table like this:

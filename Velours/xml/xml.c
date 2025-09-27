@@ -376,8 +376,6 @@ VL_API VlResult vl_xml_node_new(VlXMLNode *node) {
 }
 
 VL_API VlResult vl_xml_node_free(VlXMLNode *node) {
-	node->name = NULL;
-
 	if (node->children)
 		VL_DA_FOREACH(node->children, i) {
 			vl_xml_node_free(&node->children[i]);
@@ -387,6 +385,8 @@ VL_API VlResult vl_xml_node_free(VlXMLNode *node) {
 		VL_DA_FOREACH(node->attributes, i) {
 			vl_xml_attribute_free(&node->attributes[i]);
 		}
+
+	VL_DA_FREE(node->name);
 
 	VL_DA_FREE(node->attributes);
 	VL_DA_FREE(node->children);

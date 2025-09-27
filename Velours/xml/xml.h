@@ -11,7 +11,7 @@ typedef struct {
 } VlXMLAttribute;
 
 struct VlXMLNode {
-	const char *name;
+	VL_DA(char) name;
 
 	// is_complex is set to 0 if the node is just a text
 	// otherwise, is_complex is 1

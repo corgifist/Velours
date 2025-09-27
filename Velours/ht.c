@@ -15,6 +15,8 @@ VL_HT_HASH(VlPtr) {
 }
 
 VL_API char vl_ht_iterate(void *table, void **pos, VlHTEntry *entry) {
+	if (!*pos) 
+		*pos = table;
 	VlHTHeader* header = VL_HT_HEADER(table);
 	size_t entry_size = (sizeof(uint64_t) + sizeof(char) + header->key_size + header->value_size);
 	size_t size = header->cap * entry_size;
