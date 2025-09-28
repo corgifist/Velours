@@ -3,10 +3,10 @@
 #include "ht.h"
 #include "xml/xml.h"
 #include "utf8.h"
-#include <windows.h>
-
+#include "file.h"
 #include "memory.h"
 
+#include <windows.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -180,6 +180,26 @@ void ht_test(void) {
     printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
 }
 
+void file_test(void) {
+    VL_DA(char) content;
+
+    if (vl_file_read("./30mb.xml", &content)) {
+        printf("failed to read 30mb.xml\n");
+        return;
+    }
+    printf("memory usage after reading a file: %zu\n", vl_get_memory_usage());
+
+    VlXML xml;
+    if (vl_xml_new(&xml, content, NULL)) {
+        printf("failed to parse 30mb.xml\n");
+        return;
+    }
+    VL_DA_FREE(content);
+    printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+    vl_dump_all_allocations();
+
+}
+
 void xml_test(void) {
     printf("initial memory usage: %zu\n", vl_get_memory_usage());
 
@@ -204,13 +224,16 @@ void xml_test(void) {
     }
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    VL_UNUSED(argc);
+    printf("%s\n", argv[0]);
 	SetConsoleOutputCP(CP_UTF8);
-    vl_memory_set_logging_level(VL_MEMORY_ALL);
+    vl_memory_set_logging_level(VL_MEMORY_ONLY_ERRORS);
 
 	// da_test();
     // ht_test();
-    xml_test();
+    file_test();
+    // xml_test();
 
 
 	return VL_SUCCESS;

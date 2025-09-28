@@ -43,21 +43,26 @@ typedef struct {
 
 #define VL_HT_HEADER(VAR) ((VlHTHeader*) ((char*) (VAR) - sizeof(VlHTHeader)))
 
-#define VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION(VAR, KEY_SIZE, VALUE_SIZE, MALLOC, HASH_FUNCTION) \
+#define VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION_AND_CAPACITY(VAR, KEY_SIZE, VALUE_SIZE, MALLOC, HASH_FUNCTION, CAPACITY) \
 	do { \
-		VAR = MALLOC((sizeof(uint64_t) + sizeof(char) + (KEY_SIZE) + VALUE_SIZE) * VL_HT_DEFAULT_ENTRIES_CAPACITY + sizeof(VlHTHeader)); \
+		VAR = MALLOC((sizeof(uint64_t) + sizeof(char) + (KEY_SIZE) + VALUE_SIZE) * (CAPACITY) + sizeof(VlHTHeader)); \
 		if (!VAR) { \
 			printf("malloc in VL_HT_ALLOC_WITH_ELEMENT_SIZE_AND_ALLOCATOR(%s, %zu, %zu, %s, %s) has returned NULL\n", #VAR, (KEY_SIZE), (VALUE_SIZE), #MALLOC, #HASH_FUNCTION); \
 			break; \
 		} \
-		memset(VAR, 0, (sizeof(uint64_t) + sizeof(char) + (KEY_SIZE) + (VALUE_SIZE)) * VL_HT_DEFAULT_ENTRIES_CAPACITY + sizeof(VlHTHeader)); \
+		memset(VAR, 0, (sizeof(uint64_t) + sizeof(char) + (KEY_SIZE) + (VALUE_SIZE)) * (CAPACITY) + sizeof(VlHTHeader)); \
 		((VlHTHeader*) VAR)->key_size = (KEY_SIZE); \
 		((VlHTHeader*) VAR)->value_size = (VALUE_SIZE); \
 		((VlHTHeader*) VAR)->count = 0; \
-		((VlHTHeader*) VAR)->cap = VL_HT_DEFAULT_ENTRIES_CAPACITY; \
+		((VlHTHeader*) VAR)->cap = (CAPACITY); \
 		((VlHTHeader*) VAR)->hash_key = HASH_FUNCTION; \
 		VAR = (void*) ((char*) VAR + sizeof(VlHTHeader)); \
 	} while (0)
+
+#define VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION(VAR, KEY_SIZE, VALUE_SIZE, MALLOC, HASH_FUNCTION) \
+	VL_BASE( \
+		VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION_AND_CAPACITY(VAR, KEY_SIZE, VALUE_SIZE, MALLOC, HASH_FUNCTION, VL_HT_DEFAULT_ENTRIES_CAPACITY) \
+	)
 
 #define VL_HT_NEW_WITH_ALLOCATOR(VAR, KEY_T, VALUE_T, MALLOC) \
 	VL_BASE(VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION(VAR, sizeof(KEY_T), sizeof(VALUE_T), MALLOC, vl_ht_hash_##KEY_T))

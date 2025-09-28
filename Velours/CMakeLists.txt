@@ -7,7 +7,7 @@ set(Velours_Sources
 	da.h
 	utf8.h
 	memory.c
-	memory.h "ht.h" "ht.c")
+	memory.h "ht.h" "ht.c" "file.h" "file.c")
 
 add_subdirectory(xml)
 
@@ -20,9 +20,12 @@ endif()
 
 if(WIN32)
 	target_compile_definitions(Velours PRIVATE UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
-	target_compile_options(Velours PRIVATE /utf-8 /Wall /WX /wd4820 /wd5045)
+	target_compile_options(Velours PRIVATE /utf-8 /Wall /WX)
+	target_compile_options(Velours PUBLIC /wd4820 /wd5045 /wd4710 /wd4711)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 target_compile_definitions(Velours PUBLIC VELOURS_MANAGED_MALLOC)
+endif()
 
 target_include_directories(Velours PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

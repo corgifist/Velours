@@ -41,19 +41,21 @@ typedef struct {
 
 #define VL_DA_LENGTH(VAR) (VAR ? VL_DA_HEADER(VAR)->count : 0)
 
-#define VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR(VAR, SIZE, MALLOC) \
+#define VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR_AND_CAPACITY(VAR, SIZE, MALLOC, CAPACITY) \
 	do { \
-		VAR = MALLOC(SIZE * (VL_DA_DEFAULT_CAPACITY) + sizeof(VlDAHeader)); \
+		VAR = MALLOC(SIZE * (CAPACITY) + sizeof(VlDAHeader)); \
 		if (!VAR) { \
 			printf("malloc from VL_DA_NEW_WITH_ELEMENT_SIZE(%s, %zu) has returned NULL", #VAR, SIZE); \
 			break; \
 		} \
 		((VlDAHeader*) VAR)->element_size = SIZE; \
 		((VlDAHeader*) VAR)->count = 0; \
-		((VlDAHeader*) VAR)->cap = VL_DA_DEFAULT_CAPACITY; \
+		((VlDAHeader*) VAR)->cap = CAPACITY; \
 		VAR = (void*) ((char*) VAR + sizeof(VlDAHeader)); \
 	} while (0)
 
+#define VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR(VAR, SIZE, MALLOC) \
+	VL_BASE(VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR_AND_CAPACITY(VAR, SIZE, MALLOC, VL_DA_DEFAULT_CAPACITY))
 #define VL_DA_NEW_WITH_ALLOCATOR(VAR, T, MALLOC) VL_BASE(VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR(VAR, sizeof(T), MALLOC))
 #define VL_DA_NEW(VAR, T) VL_BASE(VL_DA_NEW_WITH_ALLOCATOR(VAR, T, VL_MALLOC))
 
@@ -95,7 +97,7 @@ typedef struct {
 		for (size_t i = index; i < header->count; i++) { \
 			memcpy(VAR + i, VAR + i + 1, header->element_size); \
 		} \
-		if (header->count <= header->cap / 2) { \
+		if (header->count <= header->cap / 2 && header->cap / 2 > VL_DA_DEFAULT_CAPACITY) { \
 			VAR = REALLOC((char*) VAR - sizeof(VlDAHeader), header->cap / 2 * header->element_size + sizeof(VlDAHeader)); \
 			if (!VAR) { \
 				printf("realloc in VL_DA_DELETE(%s, %s) has returned NULL", #VAR, #I); \

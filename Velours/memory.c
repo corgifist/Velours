@@ -25,10 +25,12 @@ VL_HT_HASH(VlAllocInfo) {
 static VL_HT(void*, VlAllocInfo) s_allocs;
 static int s_level = VL_MEMORY_ONLY_ERRORS;
 
+#define VL_MEMORY_DEFAULT_CAPACITY 1024
+
 // do NOT use managed malloc when using dynamic arrays here
 // so we don't get stuck in a loop where vl_malloc calls vl_malloc and so on
 #define CHECK_ALLOCS() \
-	if (!s_allocs) VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION(s_allocs, sizeof(void*), sizeof(VlAllocInfo), malloc, vl_ht_hash_VlAllocInfo);
+	if (!s_allocs) VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION_AND_CAPACITY(s_allocs, sizeof(void*), sizeof(VlAllocInfo), malloc, vl_ht_hash_VlAllocInfo, VL_MEMORY_DEFAULT_CAPACITY);
 
 VL_API void *vl_malloc(const char* file, size_t line, size_t size) {
 	if (!size) return NULL;
@@ -130,7 +132,9 @@ VL_API void vl_dump_all_allocations(void) {
 
 #else
 
-VL_API void vl_memory_set_logging_level(int) {}
+VL_API void vl_memory_set_logging_level(int level) {
+	VL_UNUSED(level);
+}
 
 VL_API size_t vl_get_memory_usage(void) {
 	return 0;
