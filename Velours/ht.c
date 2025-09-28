@@ -23,9 +23,9 @@ VL_API char vl_ht_iterate(void *table, void **pos, VlHTEntry *entry) {
 	size_t offset = (uint64_t) *pos - (uint64_t) table;
 	while (offset < size) {
 		uint64_t *hash = (uint64_t*) ((char*) table + offset);
-		char* is_occupied = (char*)((char*)hash + sizeof(uint64_t));
+		char *is_occupied = (char*)((char*)hash + sizeof(uint64_t));
 		void *key = (char*) is_occupied + sizeof(char);
-		void* value = (char*) key + header->key_size;
+		void *value = (char*) key + header->key_size;
 		*pos = (char*) *pos + entry_size;
 		offset = (uint64_t) *pos - (uint64_t) table;
 		if (*is_occupied) {

@@ -95,7 +95,7 @@ const char* test_xml =  VL_STRINGIFY_VARIADIC(
       </address>
       <address>
          <street>720 Prospect</street>
-         <city>Framingham</city>
+         <city>Framingham</city> // intentional error
          <state>MA</state>
          <zip>01701</zip>
       </address>
@@ -232,8 +232,8 @@ int main(int argc, char **argv) {
 
 	// da_test();
     // ht_test();
-    file_test();
-    // xml_test();
+    // file_test();
+    xml_test();
 
 
 	return VL_SUCCESS;

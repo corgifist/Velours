@@ -303,13 +303,22 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 	return special_level >= 2 ? VL_SPECIAL_TAG : VL_SUCCESS;
 }
 
-static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode* node, VlXMLParser* parser, VlXML* xml, char* error, size_t* error_offset) {
+static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode *node, VlXMLParser *parser, VlXML *xml, char *error, size_t *error_offset) {
 	char parse_child_nodes;
 	VL_DA(VlXMLNode) stack;
 	VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR_AND_CAPACITY(stack, sizeof(VlXMLNode), VL_MALLOC, 24);
 
 	VlXMLNode intermediate;
 	vl_xml_node_new(&intermediate);
+
+#define APPEND_ERROR(...) \
+	do { \
+		if (error) { \
+			if (*error_offset != 0) \
+				*error_offset += sprintf(error + *error_offset, "\n"); \
+			*error_offset += sprintf(error + *error_offset, __VA_ARGS__); \
+		} \
+	} while (0)
 
 #define PUSH_NODE(NODE) \
 	VL_DA_APPEND(stack, NODE)
@@ -346,7 +355,7 @@ static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode* node, VlXMLParse
 
 		if (parse_result == VL_SPECIAL_TAG) {
 			if (VL_DA_HEADER(stack)->count != 0) {
-				printf("processing instruction at the wrong place!\n");
+				APPEND_ERROR("processing instruction at the wrong place!\n");
 				vl_xml_node_free(&intermediate);
 				return VL_ERROR;
 			}
@@ -357,7 +366,7 @@ static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode* node, VlXMLParse
 
 		if (parse_result == VL_EXPECTED_CLOSING_TAG) {
 			if (strcmp(TOP.name, intermediate.name) != 0) {
-				printf("mismatched tags <%s> and </%s> at line %zu\n", TOP.name, intermediate.name, parser->line);
+				APPEND_ERROR("mismatched tags <%s> and </%s> at line %zu\n", TOP.name, intermediate.name, parser->line);
 				vl_xml_node_free(&intermediate);
 				return VL_ERROR;
 			}
@@ -384,6 +393,13 @@ static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode* node, VlXMLParse
 
 	VL_DA_FREE(stack);
 	vl_xml_node_free(&intermediate);
+
+#undef APPEND_ERROR
+#undef PUSH_NODE
+#undef TOP
+#undef UNDER_TOP
+#undef POP
+#undef FREE_STACK
 
 	return VL_SUCCESS;
 }

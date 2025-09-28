@@ -32,7 +32,7 @@ static int s_level = VL_MEMORY_ONLY_ERRORS;
 #define CHECK_ALLOCS() \
 	if (!s_allocs) VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION_AND_CAPACITY(s_allocs, sizeof(void*), sizeof(VlAllocInfo), malloc, vl_ht_hash_VlAllocInfo, VL_MEMORY_DEFAULT_CAPACITY);
 
-VL_API void *vl_malloc(const char* file, size_t line, size_t size) {
+VL_API void *vl_malloc(const char *file, size_t line, size_t size) {
 	if (!size) return NULL;
 	CHECK_ALLOCS();
 	if (s_level >= VL_MEMORY_ALL) printf("%s:%zu: vl_malloc(%zu)\n", file, line, size);
@@ -52,7 +52,7 @@ VL_API void *vl_malloc(const char* file, size_t line, size_t size) {
 	return res ? (char*) res + sizeof(VlAllocHeader) : NULL;
 }
 
-VL_API void *vl_calloc(const char* file, size_t line, size_t count, size_t size) {
+VL_API void *vl_calloc(const char *file, size_t line, size_t count, size_t size) {
 	if (size * count == 0) return NULL;
 	CHECK_ALLOCS();
 	if (s_level >= VL_MEMORY_ALL) printf("%s:%zu: vl_callloc(%zu, %zu)\n", file, line, count, size);
@@ -73,7 +73,7 @@ VL_API void *vl_calloc(const char* file, size_t line, size_t count, size_t size)
 	return res ? (char*) res + sizeof(VlAllocHeader) : NULL;
 }
 
-VL_API void *vl_realloc(const char* file, size_t line, void *mem, size_t new_size) {
+VL_API void *vl_realloc(const char *file, size_t line, void *mem, size_t new_size) {
 	if (!mem) return NULL;
 	CHECK_ALLOCS();
 	size_t old_size = ((VlAllocHeader*) ((char*) mem - sizeof(VlAllocHeader)))->size;
@@ -99,7 +99,7 @@ VL_API void *vl_realloc(const char* file, size_t line, void *mem, size_t new_siz
 	return res ? (char*) res + sizeof(VlAllocHeader) : NULL;
 }
 
-VL_API void vl_free(const char* file, size_t line, void* mem) {
+VL_API void vl_free(const char *file, size_t line, void *mem) {
 	if (!mem) return;
 	CHECK_ALLOCS();
 	size_t size = ((VlAllocHeader*) ((char*) mem - sizeof(VlAllocHeader)))->size;
