@@ -7,9 +7,14 @@ set(Velours_Sources
 	da.h
 	utf8.h
 	memory.c
-	memory.h "ht.h" "ht.c" "file.h" "file.c")
+	memory.h 
+	ht.c
+	ht.h
+	file.c
+	file.h)
 
 add_subdirectory(xml)
+add_subdirectory(platform)
 
 add_library(Velours ${Velours_Sources})
 target_compile_definitions(Velours PRIVATE PROPERTIES VELOURS_EXPORT)

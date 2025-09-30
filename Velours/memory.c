@@ -35,7 +35,7 @@ static int s_level = VL_MEMORY_ONLY_ERRORS;
 VL_API void *vl_malloc(const char *file, size_t line, size_t size) {
 	if (!size) return NULL;
 	CHECK_ALLOCS();
-	if (s_level >= VL_MEMORY_ALL) printf("%s:%zu: vl_malloc(%zu)\n", file, line, size);
+	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_malloc(%zu)\n", file, line, size);
 	void *res = malloc(size + sizeof(VlAllocHeader));
 	if (res) s_allocated += size;
 	if (res) {
@@ -55,7 +55,7 @@ VL_API void *vl_malloc(const char *file, size_t line, size_t size) {
 VL_API void *vl_calloc(const char *file, size_t line, size_t count, size_t size) {
 	if (size * count == 0) return NULL;
 	CHECK_ALLOCS();
-	if (s_level >= VL_MEMORY_ALL) printf("%s:%zu: vl_callloc(%zu, %zu)\n", file, line, count, size);
+	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_callloc(%zu, %zu)\n", file, line, count, size);
 	void *res = malloc(size * count + sizeof(VlAllocHeader));
 	if (res) s_allocated += size * count;
 	if (res) memset(res, 0, size * count + sizeof(VlAllocHeader));
@@ -77,7 +77,7 @@ VL_API void *vl_realloc(const char *file, size_t line, void *mem, size_t new_siz
 	if (!mem) return NULL;
 	CHECK_ALLOCS();
 	size_t old_size = ((VlAllocHeader*) ((char*) mem - sizeof(VlAllocHeader)))->size;
-	if (s_level >= VL_MEMORY_ALL) printf("%s:%zu: vl_realloc(%p, %zu), old size: %zu\n", file, line, mem, new_size, old_size);
+	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_realloc(%p, %zu), old size: %zu\n", file, line, mem, new_size, old_size);
 	void* res = realloc((char*) mem - sizeof(VlAllocHeader), new_size + sizeof(VlAllocHeader));
 	if (res) {
 		((VlAllocHeader*) res)->size = new_size;
@@ -103,7 +103,7 @@ VL_API void vl_free(const char *file, size_t line, void *mem) {
 	if (!mem) return;
 	CHECK_ALLOCS();
 	size_t size = ((VlAllocHeader*) ((char*) mem - sizeof(VlAllocHeader)))->size;
-	if (s_level >= VL_MEMORY_ALL) printf("%s:%zu: vl_free(%p), alloc size: %zu\n", file, line, mem, size);
+	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_free(%p), alloc size: %zu\n", file, line, mem, size);
 	char success = 0;
 	VL_HT_DELETE(s_allocs, mem, success);
 	if (!success && s_level >= VL_MEMORY_ONLY_ERRORS) printf("failed to remove allocation %p from s_allocs\n", mem);
@@ -126,7 +126,7 @@ VL_API void vl_dump_all_allocations(void) {
 	printf("%zu allocation(s):\n", VL_HT_HEADER(s_allocs)->count);
 	while (vl_ht_iterate(s_allocs, &iterator_pos, &entry)) {
 		VlAllocInfo *alloc = (VlAllocInfo*) entry.value;
-		printf("%s:%zu: %zu bytes, %p\n", alloc->file, alloc->line, alloc->size, alloc->ptr);
+		printf("%s(%zu) %zu bytes, %p\n", alloc->file, alloc->line, alloc->size, alloc->ptr);
 	}
 }
 

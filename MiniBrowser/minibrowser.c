@@ -5,6 +5,7 @@
 #include "utf8.h"
 #include "file.h"
 #include "memory.h"
+#include "platform/window.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -224,17 +225,23 @@ void xml_test(void) {
     }
 }
 
+void window_test(void) {
+    vl_window_new("Hello!", 800, 600);
+}
+
 int main(int argc, char **argv) {
-    VL_UNUSED(argc);
-    printf("%s\n", argv[0]);
+    for (int i = 0; i < argc; i++) {
+        printf("%s, ", argv[i]);
+    }
+    printf("\n");
 	SetConsoleOutputCP(CP_UTF8);
     vl_memory_set_logging_level(VL_MEMORY_ONLY_ERRORS);
 
 	// da_test();
     // ht_test();
     // file_test();
-    xml_test();
-
+    // xml_test();
+    window_test();
 
 	return VL_SUCCESS;
 }

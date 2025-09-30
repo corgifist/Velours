@@ -5,7 +5,7 @@ set(MiniBrowser_Sources
 	minibrowser.c
 )
 
-add_executable(MiniBrowser ${MiniBrowser_Sources})
+add_executable(MiniBrowser WIN32 ${MiniBrowser_Sources})
 target_link_libraries(MiniBrowser PRIVATE Velours)
 
 if(WIN32)
