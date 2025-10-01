@@ -226,7 +226,8 @@ void xml_test(void) {
 }
 
 void window_test(void) {
-    vl_window_new("Hello!", 800, 600);
+    VlWindow *win = vl_window_new("Hello!", 800, 600);
+    vl_window_message_loop(win);
 }
 
 int main(int argc, char **argv) {

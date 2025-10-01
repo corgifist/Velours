@@ -6,7 +6,8 @@
 #include <Windows.h>
 
 typedef struct {
-	HINSTANCE instance;
+	HINSTANCE hInstance;
+	int nCmdShow;
 } VlWinInstance;
 
 #endif // VELOURS_PLATFORM_WIN_INSTANCE_H

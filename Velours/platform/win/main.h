@@ -24,7 +24,8 @@
 		VL_UNUSED(pCmdLine); \
 		VL_UNUSED(nCmdShow); \
 		VlWinInstance win; \
-		win.instance = hInstance; \
+		win.hInstance = hInstance; \
+		win.nCmdShow = nCmdShow; \
 		vl_instance_set((VlInstance*) &win); \
 		LPWSTR cmd = GetCommandLine(); \
 		int argc = 1; \
