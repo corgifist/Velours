@@ -10,5 +10,6 @@ set(Velours_Sources
 	platform/instance.h
 	platform/window.h
 	platform/main.h
+	platform/graphics.h
 	PARENT_SCOPE
 )

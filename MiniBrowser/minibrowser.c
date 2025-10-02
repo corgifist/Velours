@@ -6,6 +6,8 @@
 #include "file.h"
 #include "memory.h"
 #include "platform/window.h"
+#include "platform/graphics.h"
+#include "platform/main.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -225,9 +227,37 @@ void xml_test(void) {
     }
 }
 
+static VlGraphics *graphics = NULL;
+static VlGraphicsBrush yellow_brush;
+
+void paint(VlWindow window) {
+    VL_UNUSED(window);
+    vl_graphics_begin(graphics);
+    vl_graphics_clear(graphics, VL_RGBA(0.1, 0.1, 0.1, 1));
+    vl_graphics_draw_rectangle(graphics, &yellow_brush, VL_RECT(100, 100, 400, 400), 2);
+    vl_graphics_end(graphics);
+}
+
+void resize(VlWindow window, int w, int h) {
+    VL_UNUSED(window);
+    vl_graphics_resize(graphics, w, h);
+}
+
 void window_test(void) {
+    vl_graphics_initialize();
+    printf("testing custom console!\n");
     VlWindow *win = vl_window_new("Velours windows are working!", 640, 480, 200, 200);
+    graphics = vl_graphics_new(win);
+    vl_graphics_brush_new_solid(graphics, &yellow_brush, VL_RGBA(1, 1, 0, 1));
+    vl_window_set_paint_function(win, paint);
+    vl_window_set_resize_function(win, resize);
+    vl_window_set_visible(win, 1);
     vl_window_message_loop(win);
+    vl_graphics_brush_free(&yellow_brush);
+    vl_graphics_free(graphics);
+    vl_window_free(win);
+
+    vl_graphics_terminate();
 }
 
 int main(int argc, char **argv) {
@@ -236,13 +266,15 @@ int main(int argc, char **argv) {
     }
     printf("\n");
 	SetConsoleOutputCP(CP_UTF8);
-    vl_memory_set_logging_level(VL_MEMORY_ONLY_ERRORS);
+    vl_memory_set_logging_level(VL_MEMORY_ALL);
 
 	// da_test();
     // ht_test();
     // file_test();
     // xml_test();
     window_test();
+
+    vl_dump_all_allocations();
 
 	return VL_SUCCESS;
 }

@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 #define VL_EXTERN_C extern "C"
@@ -28,7 +29,6 @@
 #define LINUX
 #endif
 
-
 // does nothing, like literally nothing
 // should be used to chain preprocessor macros together
 // check da.h to see how VL_BASE is used
@@ -46,8 +46,6 @@
 #define VL_API
 #endif // defined(WIN) && defined(VELOURS_SHARED)
 
-#include "platform/main.h"
-
 #define VL_SUCCESS 0
 #define VL_ERROR 1
 
@@ -59,6 +57,20 @@
 
 #define VL_LOG_ERROR(...) fprintf(stderr, __FILE__ "(" VL_STRINGIFY_EXPAND(__LINE__) "): " __VA_ARGS__)
 
+#ifdef WIN
+#include <Windows.h>
+
+#define VL_HRESULT_CALL(CALL) \
+	do { \
+		if (!SUCCEEDED(CALL)) \
+			fprintf(stderr, __FILE__ "(" VL_STRINGIFY_EXPAND(__LINE__) " ): HRESULT failed!\n"); \
+	} while (0)
+#endif // WIN
+
 typedef char VlResult;
+
+typedef char	 u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
 
 #endif

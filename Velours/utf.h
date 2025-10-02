@@ -5,19 +5,8 @@
 #ifndef VELOURS_UTF_H
 #define VELOURS_UTF_H
 
-#include <stdint.h>
-
+#include "velours.h"
 #include "da.h"
-
-typedef char  u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-
-#define UTF8_IS_ASCII(b)      (((b) & 0x80) == 0)
-#define UTF8_IS_LEAD_2(b)     (((b) & 0xE0) == 0xC0)
-#define UTF8_IS_LEAD_3(b)     (((b) & 0xF0) == 0xE0)
-#define UTF8_IS_LEAD_4(b)     (((b) & 0xF8) == 0xF0)
-#define UTF8_IS_CONT(b)       (((b) & 0xC0) == 0x80)
 
 // decodes one codepoint from utf-8 string
 // usage:
@@ -27,7 +16,7 @@ typedef uint32_t u32;
 //     printf("%.*s\n", len, s - len); | => "П" 
  static uint32_t utf8_decode(u8** p, int* out_len) {
 	u8* s = (u8*)*p;
-	u32 u32;
+	u32 u32 = 0;
 	int len = 1;
 
 	if ((((s[0]) & 0x80) == 0)) {
@@ -119,7 +108,7 @@ static size_t utf8_strlen(const u8* s) {
 			++p;
 		}
 		else if ((((*p) & 0xE0) == 0xC0) &&
-			UTF8_IS_CONT(p[1])) {
+			(((p[1]) & 0xC0) == 0x80)) {
 			p += 2;
 		}
 		else if ((((*p) & 0xF0) == 0xE0) &&
@@ -162,22 +151,24 @@ static void utf8_dump_codepoint(u32 u32) {
 	else printf("U-%06X", u32);
 }
 
-static uint32_t utf16_decode(const u16** p)
+static u32 utf16_decode(const u16** p, int *out_len)
 {
 	u16 w1 = **p;
 	(*p)++;
 
 	if (w1 < 0xD800 || w1 > 0xDFFF) {
+		if (out_len) *out_len = 1;
 		return w1;
 	}
 
 	/* high surrogates must be followed by a low surrogate */
 	if (w1 >= 0xD800 && w1 <= 0xDBFF) {
-		uint16_t w2 = **p;
+		u16 w2 = **p;
 		if (w2 >= 0xDC00 && w2 <= 0xDFFF) {
 			(*p)++;
-			uint32_t high = w1 - 0xD800;
-			uint32_t low = w2 - 0xDC00;
+			u32 high = w1 - 0xD800;
+			u32 low = w2 - 0xDC00;
+			if (out_len) *out_len = 2;
 			return (high << 10) + low + 0x10000;
 		}
 		VL_LOG_ERROR("isolated high surrogate 0x%04X\n", w1);
@@ -209,16 +200,32 @@ static int utf16_encode(u32 codepoint, u16 out[2]) {
 static VL_DA(u16) utf8_to_utf16(const u8* s) {
 	VL_DA(u16) result;
 	VL_DA_NEW(result, u16);
-	const u8* p = s;
+	const u8 *p = s;
 	u32 u32 = 0;
 	while ((u32 = utf8_decode(&p, NULL))) {
 		u16 enc[2];
 		int len = utf16_encode(u32, enc);
-		VL_DA_APPEND(result, enc[0]);
+		if (len >= 1) VL_DA_APPEND(result, enc[0]);
 		if (len >= 2) VL_DA_APPEND(result, enc[1]);
 	}
-	VL_DA_RESIZE(result, VL_DA_HEADER(result)->count + 1);
-	result[VL_DA_HEADER(result)->count - 1] = 0;
+	VL_DA_APPEND_CONST(result, char, 0);
+	return result;
+}
+
+static VL_DA(u8) utf16_to_utf8(const u16 *s) {
+	VL_DA(u8) result;
+	VL_DA_NEW(result, u8);
+	const u16 *p = s;
+	u32 cp = 0;
+	while ((cp = utf16_decode(&p, NULL))) {
+		u8 enc[4];
+		int len = utf8_encode(cp, enc);
+		if (len >= 1)VL_DA_APPEND(result, enc[0]);
+		if (len >= 2) VL_DA_APPEND(result, enc[1]);
+		if (len >= 3) VL_DA_APPEND(result, enc[2]);
+		if (len >= 4) VL_DA_APPEND(result, enc[3]);
+	}
+	VL_DA_APPEND_CONST(result, char, 0);
 	return result;
 }
 

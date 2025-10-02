@@ -2,6 +2,8 @@ set(Velours_Sources
 	${Velours_Sources}
 	platform/win/instance.h
 	platform/win/window.c
+	platform/win/window.h
 	platform/win/main.h
+	platform/win/graphics.cpp
 	PARENT_SCOPE
 )

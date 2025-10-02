@@ -106,7 +106,9 @@ VL_API void vl_free(const char *file, size_t line, void *mem) {
 	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_free(%p), alloc size: %zu\n", file, line, mem, size);
 	char success = 0;
 	VL_HT_DELETE(s_allocs, mem, success);
-	if (!success && s_level >= VL_MEMORY_ONLY_ERRORS) printf("failed to remove allocation %p from s_allocs\n", mem);
+	if (!success && s_level >= VL_MEMORY_ONLY_ERRORS) {
+		printf("failed to remove allocation %p from s_allocs\n", mem);
+	}
 	if (!success) exit(VL_ERROR);
 	free(((char*) mem - sizeof(VlAllocHeader)));
 	s_allocated -= size;
