@@ -6,8 +6,8 @@
 //  for VlWinInstance
 #include "instance.h"
 
-// VL_MALLOC etc.
 #include "memory.h"
+#include "utf.h"
 
 #include <Windows.h>
 #include <stdio.h>
@@ -15,6 +15,7 @@
 static char s_initialized = 0;
 
 static const LPCWSTR s_class_name = L"Velours";
+static HCURSOR s_pointer_cursor = NULL;
 
 typedef struct {
 	HWND hwnd;
@@ -23,17 +24,17 @@ typedef struct {
 static LRESULT CALLBACK vl_window_proc(HWND, UINT, WPARAM, LPARAM);
 
 static void vl_window_initialize(HINSTANCE instance) {
+	s_pointer_cursor = LoadCursor(NULL, IDC_ARROW);
+
 	WNDCLASSW w = { 0 };
 	w.lpszClassName = s_class_name;
 	w.hInstance = instance;
 	w.lpfnWndProc = vl_window_proc;
+	w.hCursor = s_pointer_cursor;
 	RegisterClass(&w);
 }
 
-VL_API VlWindow *vl_window_new(const char *name, int w, int h) {
-	VL_UNUSED(name);
-	VL_UNUSED(w);
-	VL_UNUSED(h);
+VL_API VlWindow *vl_window_new(const u8* title, int x, int y, int w, int h) {
 	VlWinInstance* win = (VlWinInstance*) vl_instance_get();
 	if (!win) {
 		VL_LOG_ERROR("VlWinInstance is NULL\n");
@@ -46,15 +47,20 @@ VL_API VlWindow *vl_window_new(const char *name, int w, int h) {
 	}
 
 	VlWinWindow *window = VL_MALLOC(sizeof(VlWinWindow));
+	VL_DA(u16) u16_name = utf8_to_utf16(title);
+#define DEFAULT(X) (X ? X : CW_USEDEFAULT)
 	window->hwnd = CreateWindowEx(
 		0,
 		s_class_name,
-		(LPCWSTR) name,
+		(LPCWSTR) u16_name,
 		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+		DEFAULT(w), DEFAULT(h), DEFAULT(x), DEFAULT(y),
 		NULL, NULL,
 		win->hInstance, NULL
 	);
+#undef OPTIONAL
+
+	VL_DA_FREE(u16_name);
 
 	if (!window->hwnd) {
 		VL_LOG_ERROR("failed to create new window in vl_window_new");

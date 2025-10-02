@@ -3,15 +3,16 @@
 
 #include "velours.h"
 #include "da.h"
+#include "utf.h"
 
 typedef struct {
 	// name and value ARE null-terminated utf-8 strings!
-	VL_DA(char) name;
-	VL_DA(char) value;
+	VL_DA(u8) name;
+	VL_DA(u8) value;
 } VlXMLAttribute;
 
 struct VlXMLNode {
-	VL_DA(char) name;
+	VL_DA(u8) name;
 
 	// is_complex is set to 0 if the node is just a text
 	// otherwise, is_complex is 1
@@ -22,7 +23,7 @@ struct VlXMLNode {
 	//     </node>
 	char is_complex;
 
-	VL_DA(char) text;
+	VL_DA(u8) text;
 
 	VL_DA(VlXMLAttribute) attributes;
 	VL_DA(struct VlXMLNode) children;
@@ -89,7 +90,7 @@ VL_API void vl_xml_node_dump_recursive(VlXMLNode *node, int indent);
 //     if (vl_xml_new(&xml, "<abc>...</abc>", error)) {
 //         printf("failed to parse xml: %s\n", error);
 //     }
-VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error);
+VL_API VlResult vl_xml_new(VlXML* xml, const u8* source, u8* error);
 
 // VlResult vl_xml_free(VlXML *xml)
 // frees given xml object

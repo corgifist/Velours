@@ -2,7 +2,7 @@
 #include "da.h"
 #include "ht.h"
 #include "xml/xml.h"
-#include "utf8.h"
+#include "utf.h"
 #include "file.h"
 #include "memory.h"
 #include "platform/window.h"
@@ -182,7 +182,7 @@ void ht_test(void) {
 }
 
 void file_test(void) {
-    VL_DA(char) content;
+    VL_DA(u8) content;
 
     if (vl_file_read("./30mb.xml", &content)) {
         printf("failed to read 30mb.xml\n");
@@ -226,7 +226,7 @@ void xml_test(void) {
 }
 
 void window_test(void) {
-    VlWindow *win = vl_window_new("Hello!", 800, 600);
+    VlWindow *win = vl_window_new("Velours windows are working!", 640, 480, 200, 200);
     vl_window_message_loop(win);
 }
 

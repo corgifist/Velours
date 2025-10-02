@@ -5,13 +5,13 @@ set(Velours_Sources
 	velours.c
 	velours.h
 	da.h
-	utf8.h
 	memory.c
 	memory.h 
 	ht.c
 	ht.h
 	file.c
-	file.h)
+	file.h
+	utf.h)
 
 add_subdirectory(xml)
 add_subdirectory(platform)

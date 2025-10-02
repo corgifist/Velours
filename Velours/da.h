@@ -59,16 +59,25 @@ typedef struct {
 #define VL_DA_NEW_WITH_ALLOCATOR(VAR, T, MALLOC) VL_BASE(VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR(VAR, sizeof(T), MALLOC))
 #define VL_DA_NEW(VAR, T) VL_BASE(VL_DA_NEW_WITH_ALLOCATOR(VAR, T, VL_MALLOC))
 
+#define VL_DA_RESIZE_WITH_ALLOCATOR(VAR, NEW_SIZE, REALLOC) \
+	do { \
+		VlDAHeader *__vl_da_resize_header = VL_DA_HEADER(VAR); \
+		__vl_da_resize_header->cap = NEW_SIZE; \
+		VAR = (void*) ((char*) REALLOC(__vl_da_resize_header, __vl_da_resize_header->element_size * __vl_da_resize_header->cap + sizeof(VlDAHeader)) + sizeof(VlDAHeader)); \
+		if (!VAR) { \
+			printf("realloc from VL_DA_RESIZE_WITH_ALLOCATOR(%s, %s, %s) has returned NULL", #VAR, #NEW_SIZE, #REALLOC); \
+			break; \
+		} \
+	} while (0)
+
+#define VL_DA_RESIZE(VAR, NEW_SIZE) \
+	VL_BASE(VL_DA_RESIZE_WITH_ALLOCATOR(VAR, NEW_SIZE, VL_REALLOC))
+
 #define VL_DA_APPEND_WITH_ALLOCATOR(VAR, ELEMENT, REALLOC) \
 	do { \
 		VlDAHeader *header = VL_DA_HEADER(VAR); \
 		if (header->count + 1 >= header->cap) { \
-			header->cap *= 2; \
-			VAR = (void*) ((char*) REALLOC(header, header->element_size * header->cap + sizeof(VlDAHeader)) + sizeof(VlDAHeader)); \
-			if (!VAR) { \
-				printf("realloc from VL_DA_APPEND(%s, %s) has returned NULL", #VAR, #ELEMENT); \
-				break; \
-			} \
+			VL_DA_RESIZE_WITH_ALLOCATOR(VAR, header->cap * 2, REALLOC); \
 			header = VL_DA_HEADER(VAR); \
 		} \
 		memcpy((char*) VAR + header->element_size * header->count, &(ELEMENT), header->element_size); \
@@ -98,14 +107,7 @@ typedef struct {
 			memcpy(VAR + i, VAR + i + 1, header->element_size); \
 		} \
 		if (header->count <= header->cap / 2 && header->cap / 2 > VL_DA_DEFAULT_CAPACITY) { \
-			VAR = REALLOC((char*) VAR - sizeof(VlDAHeader), header->cap / 2 * header->element_size + sizeof(VlDAHeader)); \
-			if (!VAR) { \
-				printf("realloc in VL_DA_DELETE(%s, %s) has returned NULL", #VAR, #I); \
-				break; \
-			} \
-			header = (VlDAHeader*) VAR; \
-			header->cap /= 2; \
-			VAR = (void*) ((char*) VAR + sizeof(VlDAHeader)); \
+			VL_DA_RESIZE_WITH_ALLOCATOR(VAR, header->cap / 2, REALLOC); \
 		} \
 	} while (0)
 

@@ -1,5 +1,5 @@
 #include "xml.h"
-#include "utf8.h"
+#include "utf.h"
 
 #define COLLECTING_NOTHING 0
 #define COLLECTING_NODE_NAME 1
@@ -7,12 +7,12 @@
 #define COLLECTING_PROPERTY_VALUE 3
 
 typedef struct {
-	const char *source;
+	const u8 *source;
 	size_t pos, line, len;
 
-	VL_DA(char) node_name;
-	VL_DA(char) property_name;
-	VL_DA(char) property_value;
+	VL_DA(u8) node_name;
+	VL_DA(u8) property_name;
+	VL_DA(u8) property_value;
 	char state;
 } VlXMLParser;
 
@@ -20,7 +20,7 @@ typedef struct {
 #define VL_SKIP_TAG 4
 #define VL_SPECIAL_TAG 8
 
-static VlResult vl_xml_parser_new(VlXMLParser *parser, const char *source) {
+static VlResult vl_xml_parser_new(VlXMLParser *parser, const u8 *source) {
 	parser->pos = 0;
 	parser->line = 1;
 	parser->source = source;
@@ -29,9 +29,9 @@ static VlResult vl_xml_parser_new(VlXMLParser *parser, const char *source) {
 	parser->property_name = NULL;
 	parser->state = COLLECTING_NOTHING;
 
-	VL_DA_NEW(parser->node_name, char);
-	VL_DA_NEW(parser->property_name, char);
-	VL_DA_NEW(parser->property_value, char);
+	VL_DA_NEW(parser->node_name, u8);
+	VL_DA_NEW(parser->property_name, u8);
+	VL_DA_NEW(parser->property_value, u8);
 
 	return VL_SUCCESS;
 }
@@ -44,7 +44,7 @@ static VlResult vl_xml_parser_free(VlXMLParser *parser) {
 	return VL_SUCCESS;
 }
 
-static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, VlXML *xml, char *error, size_t *error_offset, char *parse_child_nodes) {
+static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, VlXML *xml, u8 *error, size_t *error_offset, char *parse_child_nodes) {
 	VL_UNUSED(xml);
 	VL_UNUSED(node);
 	// utf8_advance(&p, parser->pos);
@@ -101,7 +101,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 				continue;
 			}
 
-			const char* c = parser->source - len;
+			const u8 *c = parser->source - len;
 			if (len >= 1) VL_DA_APPEND_CONST(node->text, char, *c);
 			if (len >= 2) VL_DA_APPEND_CONST(node->text, char, *(c + 1));
 			if (len >= 3) VL_DA_APPEND_CONST(node->text, char, *(c + 2));
@@ -252,7 +252,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 			continue;
 		}
 
-		VL_DA(char)* target_array = NULL;
+		VL_DA(u8)* target_array = NULL;
 		if (parser->state == COLLECTING_NODE_NAME)
 			target_array = &parser->node_name;
 		else if (parser->state == COLLECTING_PROPERTY_NAME)
@@ -260,7 +260,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		else if (parser->state == COLLECTING_PROPERTY_VALUE)
 			target_array = &parser->property_value;
 
-		const char* c = parser->source - len;
+		const u8 *c = parser->source - len;
 		if (len >= 1) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *c));
 		if (len >= 2) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(c + 1)));
 		if (len >= 3) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(c + 2)));
@@ -303,7 +303,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 	return special_level >= 2 ? VL_SPECIAL_TAG : VL_SUCCESS;
 }
 
-static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode *node, VlXMLParser *parser, VlXML *xml, char *error, size_t *error_offset) {
+static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode *node, VlXMLParser *parser, VlXML *xml, u8* error, size_t *error_offset) {
 	char parse_child_nodes;
 	VL_DA(VlXMLNode) stack;
 	VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR_AND_CAPACITY(stack, sizeof(VlXMLNode), VL_MALLOC, 24);
@@ -480,7 +480,7 @@ VL_API void vl_xml_dump(VlXML *xml, int indent) {
 	vl_xml_node_dump_recursive(&xml->root, indent);
 }
 
-VL_API VlResult vl_xml_new(VlXML *xml, const char *source, char *error) {
+VL_API VlResult vl_xml_new(VlXML *xml, const u8* source, u8* error) {
 	xml->version = NULL;
 	xml->encoding = NULL;
 
