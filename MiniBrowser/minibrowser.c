@@ -234,8 +234,12 @@ void paint(VlWindow window) {
     VL_UNUSED(window);
     vl_graphics_begin(graphics);
     vl_graphics_clear(graphics, VL_RGBA(0.1, 0.1, 0.1, 1));
-    vl_graphics_draw_rectangle(graphics, &yellow_brush, VL_RECT(100, 100, 400, 400), 2);
-    vl_graphics_end(graphics);
+    vl_graphics_fill_rectangle(graphics, &yellow_brush, VL_RECT(100, 100, 400, 400));
+    if (vl_graphics_end(graphics) == VL_GRAPHICS_SHOULD_TERMINATE) {
+        vl_graphics_brush_free(&yellow_brush);
+        vl_graphics_free(graphics);
+        graphics = NULL;
+    }
 }
 
 void resize(VlWindow window, int w, int h) {

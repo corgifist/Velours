@@ -77,8 +77,10 @@ VL_API VlResult vl_graphics_brush_new_solid(VlGraphics graphics, VlGraphicsBrush
 
 VL_API void vl_graphics_brush_free(VlGraphicsBrush *brush) {
 	if (!brush) return;
+	if (!brush->handle) return;
 
 	((ID2D1Brush*) brush->handle)->Release();
+	brush->handle = NULL;
 }
 
 VL_API VlResult vl_graphics_begin(VlGraphics graphics) {
@@ -93,7 +95,7 @@ VL_API VlResult vl_graphics_clear(VlGraphics graphics, VlRGBA rgba) {
 
 VL_API VlResult vl_graphics_draw_rectangle(VlGraphics graphics, VlGraphicsBrush *brush, VlRect rect, float stroke_width) {
 	if (!brush) return VL_ERROR;
-	((VlWinGraphics*)graphics)->hwnd_target->DrawRectangle(
+	((VlWinGraphics*) graphics)->hwnd_target->DrawRectangle(
 		D2D1::RectF(rect.x1, rect.y1, rect.x2, rect.y2),
 		(ID2D1Brush*)brush->handle,
 		stroke_width,
@@ -102,11 +104,21 @@ VL_API VlResult vl_graphics_draw_rectangle(VlGraphics graphics, VlGraphicsBrush 
 	return VL_SUCCESS;
 }
 
-VL_API VlResult vl_graphics_end(VlGraphics graphics) {
-	VL_HRESULT_CALL(
-		((VlWinGraphics*) graphics)->hwnd_target->EndDraw()
+VL_API VlResult vl_graphics_fill_rectangle(VlGraphics graphics, VlGraphicsBrush* brush, VlRect rect) {
+	if (!brush) return VL_ERROR;
+	((VlWinGraphics*)graphics)->hwnd_target->FillRectangle(
+		D2D1::RectF(rect.x1, rect.y1, rect.x2, rect.y2),
+		(ID2D1Brush*) brush->handle
 	);
 	return VL_SUCCESS;
+}
+
+VL_API VlResult vl_graphics_end(VlGraphics graphics) {
+	HRESULT res = ((VlWinGraphics*)graphics)->hwnd_target->EndDraw();
+	if (SUCCEEDED(res)) return VL_SUCCESS;
+	if (res == D2DERR_RECREATE_TARGET) return VL_GRAPHICS_SHOULD_TERMINATE;
+	VL_LOG_ERROR("EndDraw() returned %ld", (long) res);
+	return VL_ERROR;
 }
 
 VL_API void vl_graphics_terminate(void) {

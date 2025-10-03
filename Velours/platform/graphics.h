@@ -9,6 +9,8 @@
 #include "window.h"
 #include "math.h"
 
+#define VL_GRAPHICS_SHOULD_TERMINATE 8
+
 // VlGraphics is a pointer to platform-specific graphic infrastructure
 // e.g. VlWinGraphics on windows
 typedef void* VlGraphics;
@@ -37,7 +39,7 @@ typedef struct {
 // note: you should call vl_graphics_initialize only ONCE
 VL_API void vl_graphics_initialize(void);
 
-// VlGraphics* vl_graphics_new(VlWindow* window)
+// VlGraphics vl_graphics_new(VlWindow* window)
 // creates graphic infrastructure for specific window
 VL_API VlGraphics vl_graphics_new(VlWindow window);
 VL_API void vl_graphics_free(VlGraphics graphics);
@@ -47,9 +49,28 @@ VL_API void vl_graphics_brush_free(VlGraphicsBrush* brush);
 
 VL_API void vl_graphics_resize(VlGraphics graphics, int w, int h);
 
+// VlResult vl_graphics_begin(VlGraphics graphics)
+// starts drawing on specified VlGraphics
+// all rendering functions should be enclosed in vl_graphics_begin / vl_graphics_end function calls
+// example:
+//     VlGraphics some_graphics;
+//     vl_graphics_begin(some_graphics);
+//     vl_graphics_clear(some_graphics, ...);
+//     vl_graphics_fill_rectangle(some_graphics, ...);
+//     vl_graphics_end(some_graphics);
 VL_API VlResult vl_graphics_begin(VlGraphics graphics);
 VL_API VlResult vl_graphics_clear(VlGraphics graphics, VlRGBA rgba);
 VL_API VlResult vl_graphics_draw_rectangle(VlGraphics graphics, VlGraphicsBrush *brush, VlRect rect, float stroke_width);
+VL_API VlResult vl_graphics_fill_rectangle(VlGraphics graphics, VlGraphicsBrush* brush, VlRect rect);
+
+// VlResult vl_graphics_end(VlGraphics graphics)
+// ends drawing on specified VlGraphics
+// usage:
+//     see vl_graphics_begin usage
+// returns:
+//     VL_SUCCESS - successfully ended drawing
+//     VL_GRAPHICS_SHOULD_TERMINATE - device has been lost and you should replace your VlGraphics with a new one
+//     VL_ERROR - some other unexpected error
 VL_API VlResult vl_graphics_end(VlGraphics graphics);
 
 // free all internal structures to avoid leaking memory

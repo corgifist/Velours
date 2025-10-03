@@ -43,7 +43,7 @@ VL_API VlWindow vl_window_new(const u8* title, int x, int y, int w, int h) {
 	}
 
 	VlWinWindow *window = VL_MALLOC(sizeof(VlWinWindow));
-	window->paint_function = NULL;
+	if (window) memset(window, 0, sizeof(*window));
 	VL_DA(u16) u16_name = utf8_to_utf16(title);
 #define DEFAULT(X) (X ? X : CW_USEDEFAULT)
 	window->hwnd = CreateWindowEx(
@@ -87,6 +87,11 @@ VL_API void vl_window_set_resize_function(VlWindow window, VlWindowResizeFunctio
 	((VlWinWindow*) window)->resize_function = fn;
 }
 
+VL_API void vl_window_set_move_function(VlWindow window, VlWindowMoveFunction fn) {
+	if (!window) return;
+	((VlWinWindow*) window)->move_function = fn;
+}
+
 VL_API void vl_window_message_loop(VlWindow window) {
 	if (!window) return;
 	VlWinWindow* win = (VlWinWindow*) window;
@@ -106,7 +111,12 @@ VL_API VlResult vl_window_free(VlWindow window) {
 static LRESULT CALLBACK vl_window_proc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 	if (msg == WM_CREATE) {
 		LPCREATESTRUCT cr = (LPCREATESTRUCT) l;
-		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) cr->lpCreateParams);
+		VlWinWindow* win = (VlWinWindow*) cr->lpCreateParams;
+		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) win);
+		win->x = cr->x;
+		win->y = cr->y;
+		win->w = cr->cx;
+		win->h = cr->cy;
 		return 1;
 	}
 
@@ -120,8 +130,24 @@ static LRESULT CALLBACK vl_window_proc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) 
 	case WM_SIZE: {
 		UINT width = LOWORD(l);
 		UINT height = HIWORD(l);
-		if (win->resize_function) {
-			win->resize_function(win, (int) width, (int) height);
+		if (win) {
+			win->w = (int)width;
+			win->h = (int)height;
+		}
+		if (win && win->resize_function) {
+			win->resize_function(win, win->w, win->h);
+		}
+		return 0;
+	}
+	case WM_MOVE: {
+		UINT x = LOWORD(l);
+		UINT y = HIWORD(l);
+		if (win) {
+			win->x = (int)x;
+			win->y = (int)y;
+		}
+		if (win && win->move_function) {
+			win->move_function(win, win->x, win->y);
 		}
 		return 0;
 	}

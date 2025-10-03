@@ -73,7 +73,7 @@ typedef struct {
 #define VL_HT_GROW_WITH_ALLOCATOR(VAR, REALLOC) \
 	do { \
 		VlHTHeader *__ht_grow_header = VL_HT_HEADER(VAR); \
-		uint64_t __ht_grow_header_entry_size = (sizeof(uint64_t) + sizeof(char) + __ht_grow_header->key_size + __ht_grow_header->value_size); \
+		size_t __ht_grow_header_entry_size = (sizeof(uint64_t) + sizeof(char) + __ht_grow_header->key_size + __ht_grow_header->value_size); \
 		size_t __ht_grow_header_old_size = __ht_grow_header_entry_size * __ht_grow_header->cap + sizeof(VlHTHeader); \
 		__ht_grow_header->cap *= 2; \
 		size_t __ht_grow_header_new_size = __ht_grow_header_entry_size * __ht_grow_header->cap + sizeof(VlHTHeader); \

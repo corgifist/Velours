@@ -33,6 +33,8 @@
 #ifndef NDEBUG
 #define FREE_CONSOLE() \
 	do { \
+		printf("press any key to kill debug console\n"); \
+		getchar(); \
 		FreeConsole(); \
 	} while (0)
 #else
@@ -85,8 +87,6 @@ static VL_DA(u8) __stdlib_free_utf16_to_utf8(const u16 * s) {
 		} \
 		VL_DA_FREE_WITH_ALLOCATOR(converted, free); \
 		vl_dump_all_allocations(); \
-		printf("press any key to kill debug console\n"); \
-		getchar(); \
 		FREE_CONSOLE(); \
 		return res; \
 	} \

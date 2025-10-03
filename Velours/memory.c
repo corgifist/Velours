@@ -19,7 +19,7 @@ typedef struct {
 } VlAllocInfo;
 
 VL_HT_HASH(VlAllocInfo) {
-	return (uint64_t) ((VlAllocInfo*) p)->ptr;
+	return (uint64_t) (size_t) ((VlAllocInfo*) p)->ptr;
 }
 
 static VL_HT(void*, VlAllocInfo) s_allocs;
