@@ -274,7 +274,5 @@ int main(int argc, char **argv) {
     // xml_test();
     window_test();
 
-    vl_dump_all_allocations();
-
 	return VL_SUCCESS;
 }

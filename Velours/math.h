@@ -1,5 +1,5 @@
-#ifndef VELOURS_GEOMETRY_H
-#define VELOURS_GEOMETRY_H
+#ifndef VELOURS_MATH_H
+#define VELOURS_MATH_H
 
 typedef struct {
 	float x1, y1;
@@ -13,4 +13,4 @@ typedef struct {
 #define VL_RECT(X1, Y1, X2, Y2) ((VlRect) {.x1 = (float) (X1), .y1 = (float) (Y1), .x2 = (float) (X2), .y2 = (float) (Y2)})
 #define VL_RGBA(R, G, B, A) ((VlRGBA) {.r = (float) (R), .g = (float) (G), .b = (float) (B), .a = (float) (A)})
 
-#endif // VELOURS_GEOMETRY_H
+#endif // VELOURS_MATH_H

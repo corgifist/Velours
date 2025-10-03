@@ -208,7 +208,7 @@ static VL_DA(u16) utf8_to_utf16(const u8* s) {
 		if (len >= 1) VL_DA_APPEND(result, enc[0]);
 		if (len >= 2) VL_DA_APPEND(result, enc[1]);
 	}
-	VL_DA_APPEND_CONST(result, char, 0);
+	VL_DA_APPEND_CONST(result, u16, 0);
 	return result;
 }
 
@@ -220,12 +220,12 @@ static VL_DA(u8) utf16_to_utf8(const u16 *s) {
 	while ((cp = utf16_decode(&p, NULL))) {
 		u8 enc[4];
 		int len = utf8_encode(cp, enc);
-		if (len >= 1)VL_DA_APPEND(result, enc[0]);
+		if (len >= 1) VL_DA_APPEND(result, enc[0]);
 		if (len >= 2) VL_DA_APPEND(result, enc[1]);
 		if (len >= 3) VL_DA_APPEND(result, enc[2]);
 		if (len >= 4) VL_DA_APPEND(result, enc[3]);
 	}
-	VL_DA_APPEND_CONST(result, char, 0);
+	VL_DA_APPEND_CONST(result, u8, 0);
 	return result;
 }
 
