@@ -208,7 +208,9 @@ static VL_DA(u16) utf8_to_utf16(const u8* s) {
 		if (len >= 1) VL_DA_APPEND(result, enc[0]);
 		if (len >= 2) VL_DA_APPEND(result, enc[1]);
 	}
-	VL_DA_APPEND_CONST(result, u16, 0);
+	VL_DA_RESIZE(result, VL_DA_HEADER(result)->count + 1);
+	VL_DA_HEADER(result)->count++;
+	result[VL_DA_HEADER(result)->count - 1] = '\0';
 	return result;
 }
 
@@ -225,7 +227,9 @@ static VL_DA(u8) utf16_to_utf8(const u16 *s) {
 		if (len >= 3) VL_DA_APPEND(result, enc[2]);
 		if (len >= 4) VL_DA_APPEND(result, enc[3]);
 	}
-	VL_DA_APPEND_CONST(result, u8, 0);
+	VL_DA_RESIZE(result, VL_DA_HEADER(result)->count + 1);
+	VL_DA_HEADER(result)->count++;
+	result[VL_DA_HEADER(result)->count - 1] = '\0';
 	return result;
 }
 

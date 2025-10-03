@@ -52,7 +52,9 @@ static VL_DA(u8) __stdlib_free_utf16_to_utf8(const u16 * s) {
 		if (len >= 3) VL_DA_APPEND_WITH_ALLOCATOR(result, enc[2], realloc);
 		if (len >= 4) VL_DA_APPEND_WITH_ALLOCATOR(result, enc[3], realloc);
 	}
-	VL_DA_APPEND_CONST_WITH_ALLOCATOR(result, u8, 0, realloc);
+	VL_DA_RESIZE_WITH_ALLOCATOR(result, VL_DA_HEADER(result)->count + 1, realloc);
+	VL_DA_HEADER(result)->count++;
+	result[VL_DA_HEADER(result)->count - 1] = '\0';
 	return result;
 }
 
