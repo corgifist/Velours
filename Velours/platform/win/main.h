@@ -86,7 +86,6 @@ static VL_DA(u8) __stdlib_free_utf16_to_utf8(const u16 * s) {
 			VL_DA_FREE_WITH_ALLOCATOR(converted[i], free); \
 		} \
 		VL_DA_FREE_WITH_ALLOCATOR(converted, free); \
-		vl_dump_all_allocations(); \
 		FREE_CONSOLE(); \
 		return res; \
 	} \

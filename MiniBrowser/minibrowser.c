@@ -88,6 +88,11 @@
 const char* test_xml =  VL_STRINGIFY_VARIADIC(
 <?xml version="1.0"?>
 <customers>
+   <customer id="&quot;some guy&apos;s id&quot;">
+        <name person>
+               &quot;some guy&apos;s name &amp; co.&quot;
+        </name>
+    </customer>
    <customer id="55000">
       <name>Charter Group</name>
       <address>
@@ -270,13 +275,13 @@ int main(int argc, char **argv) {
     }
     printf("\n");
 	SetConsoleOutputCP(CP_UTF8);
-    vl_memory_set_logging_level(VL_MEMORY_ALL);
+    vl_memory_set_logging_level(VL_MEMORY_ONLY_ERRORS);
 
 	// da_test();
     // ht_test();
     // file_test();
-    // xml_test();
-    window_test();
+    xml_test();
+    // window_test();
 
 	return VL_SUCCESS;
 }

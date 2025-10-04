@@ -1,5 +1,8 @@
 #include "ht.h"
 
+#define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
+#define FNV_PRIME 0x100000001b3ULL
+
 VL_HT_HASH(int) {
 	if (!p) return 0;
 	return *((int*) p);
@@ -11,7 +14,27 @@ VL_HT_HASH(char) {
 }
 
 VL_HT_HASH(VlPtr) {
-	return (uint64_t) (size_t) p;
+	uint64_t hash = FNV_OFFSET_BASIS;
+
+	const unsigned char* bytes = (const unsigned char*)p;
+	size_t i;
+	for (i = 0; i < sizeof(void*); ++i) {
+		hash ^= (uint64_t)bytes[i];
+		hash *= FNV_PRIME;
+	}
+	return hash;
+}
+
+VL_HT_HASH(VlString) {
+	const u8* s = *((const u8**)p);
+
+    uint64_t hash = FNV_OFFSET_BASIS;
+    while (s && *s) {
+		hash ^= (uint64_t)(unsigned char)*s;
+        hash *= FNV_PRIME;
+        ++s;
+    }
+    return hash;
 }
 
 VL_API char vl_ht_iterate(void *table, void **pos, VlHTEntry *entry) {

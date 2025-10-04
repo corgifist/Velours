@@ -1,3 +1,36 @@
+/*
+	xml.h - XML parsing utilities
+	PLEASE NOTICE: 
+	this parser was created to be compatible with HTML and XML at the same time
+	but HTML and XML are not interchangeable standards, which means that 
+	some functionality of HTML and XML may not be supported by this parser or
+    some documents may be parsed incorrectly	
+
+	for instance:
+	    * CDATA tags are not supported by this parser (error will be thrown)
+		* custom entity tables are not supported (error will be thrown)
+		* nodes like this
+			  <paragraph>
+				  What a <inline>beautiful</inline> world!
+			  </paragraph>
+
+		  would be parsed like this:
+		       paragraph:
+			      text node: 'What a'
+				  inline:
+				      text node: 'beautiful'
+				  text node: 'world!'
+
+		  instead of this (the way standard XML parser does):
+		       paragraph:
+			       inline:
+				       text node: 'beautiful'
+			       text node: 'What a \n world!'
+
+		  the reason is again parser should be compatible with HTML and XML at the same time
+		  
+*/
+
 #ifndef VELOURS_XML_H
 #define VELOURS_XML_H
 
@@ -32,9 +65,6 @@ struct VlXMLNode {
 typedef struct VlXMLNode VlXMLNode;
 
 typedef struct {
-	const char *version;
-	const char *encoding;
-
 	VlXMLNode root;
 	
 	// pi means processing instructions

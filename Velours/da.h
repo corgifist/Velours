@@ -76,7 +76,7 @@ typedef struct {
 #define VL_DA_APPEND_WITH_ALLOCATOR(VAR, ELEMENT, REALLOC) \
 	do { \
 		VlDAHeader *header = VL_DA_HEADER(VAR); \
-		if (header->count + 1 >= header->cap) { \
+		if (header->count + 1 >= header->cap * 0.75) { \
 			VL_DA_RESIZE_WITH_ALLOCATOR(VAR, header->cap * 2, REALLOC); \
 			header = VL_DA_HEADER(VAR); \
 		} \

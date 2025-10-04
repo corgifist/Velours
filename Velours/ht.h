@@ -92,7 +92,7 @@ typedef struct {
 #define VL_HT_PUT_WITH_ALLOCATOR(VAR, KEY, VALUE, REALLOC) \
 	do { \
 		VlHTHeader *__vl_ht_put_header = VL_HT_HEADER(VAR); \
-		if (__vl_ht_put_header->count + 1 >= __vl_ht_put_header->cap) { \
+		if (__vl_ht_put_header->count + 1 >= __vl_ht_put_header->cap * 0.75) { \
 			VL_HT_GROW_WITH_ALLOCATOR(VAR, REALLOC); \
 			__vl_ht_put_header = VL_HT_HEADER(VAR); \
 		} \
@@ -184,7 +184,7 @@ typedef struct {
 			char *entry_occupied = (char*) entry_hash + sizeof(uint64_t); \
 			/* updating already existing hash table entry */ \
 			if (*entry_hash == hash && *entry_occupied) { \
-				memset(entry_hash, 0, (sizeof(uint64_t) + sizeof(char) + header->key_size + header->value_size)); \
+				*entry_occupied = 0; \
 				header->count--; \
 				SUCCESS = 1; \
 				break; \
@@ -235,21 +235,22 @@ typedef struct {
 	VL_BASE(VL_HT_RESET_WITH_ALLOCATOR(VAR, VL_MALLOC, VL_FREE))
 
 #define VL_HT_HASH(T) \
-	VL_API uint64_t vl_ht_hash_##T(void* p)
+	VL_API uint64_t vl_ht_hash_##T(const void *p)
 
 #pragma warning(pop)
 
 // types like void*, const char* etc. cannot be used in hash tables directly
 // instead of defining hash table like this:
-//     VL_HT(const char*, void*) some_table;
+//     VL_HT(const u8*, void*) some_table;
 // you should do the folowwing:
 //     VL_HT(VlString, VlPtr) some_table;
 typedef void* VlPtr;
-typedef const char* VlString;
+typedef const u8* VlString;
 
 VL_HT_HASH(int);
 VL_HT_HASH(char);
 VL_HT_HASH(VlPtr);
+VL_HT_HASH(VlString);
 
 VL_API char vl_ht_iterate(void *ht, void **pos, VlHTEntry *entry);
 
