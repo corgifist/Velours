@@ -5,20 +5,18 @@
 #define COLLECTING_NODE_NAME 1
 #define COLLECTING_PROPERTY_NAME 2
 #define COLLECTING_PROPERTY_VALUE 3
-#define COLLECTING_CDATA 4
-
-#define CDATA_OPEN "<![CDATA["
-#define CDATA_CLOSE "]]>"
-#define CDATA_OPEN_LENGTH 9
-#define CDATA_CLOSE_LENGTH 3
 
 typedef struct {
 	const u8 *source;
-	size_t pos, line, len;
+	VlFile file;
+	size_t pos, line;
+	char eof;
 
 	VL_DA(u8) node_name;
 	VL_DA(u8) property_name;
 	VL_DA(u8) property_value;
+	VL_DA(u8) entity_name;
+
 	char state;
 } VlXMLParser;
 
@@ -42,15 +40,24 @@ static VlResult vl_xml_parser_new(VlXMLParser *parser, const u8 *source) {
 	parser->pos = 0;
 	parser->line = 1;
 	parser->source = source;
-	parser->len = utf8_strlen(parser->source);
 	parser->node_name = NULL;
 	parser->property_name = NULL;
 	parser->state = COLLECTING_NOTHING;
+	parser->eof = 0;
 
 	VL_DA_NEW(parser->node_name, u8);
 	VL_DA_NEW(parser->property_name, u8);
 	VL_DA_NEW(parser->property_value, u8);
+	VL_DA_NEW(parser->entity_name, u8);
 
+	return VL_SUCCESS;
+}
+
+static VlResult vl_xml_parser_new_from_file(VlXMLParser* parser, VlFile* file) {
+	if (vl_xml_parser_new(parser, NULL)) {
+		return VL_ERROR;
+	}
+	parser->file = *file;
 	return VL_SUCCESS;
 }
 
@@ -58,6 +65,7 @@ static VlResult vl_xml_parser_free(VlXMLParser *parser) {
 	VL_DA_FREE(parser->node_name);
 	VL_DA_FREE(parser->property_name);
 	VL_DA_FREE(parser->property_value);
+	VL_DA_FREE(parser->entity_name);
 
 	return VL_SUCCESS;
 }
@@ -77,38 +85,36 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 
 #define ADVANCE() \
 	do { \
-		if (parser->pos >= parser->len) { \
-			APPEND_ERROR("EOF at line %zu", parser->line); \
-			return VL_ERROR; \
+		if (parser->source) { \
+			codepoint = utf8_decode(&parser->source, &len); \
+			current_enc = parser->source - len; \
+		} else { \
+			codepoint = vl_file_read_codepoint(&parser->file); \
+			len = utf8_encode(codepoint, enc); \
+		} \
+		if (codepoint == 0) { \
+			parser->eof = 1; break; \
 		} \
 		parser->pos++; \
-		codepoint = utf8_decode(&parser->source, &len); \
 		if (codepoint == '\n') parser->line++; \
 	} while (0) \
 
 #define USELESS(C) ((C == ' ') || (C == '\n') || (C == '\t') || (C == '\r'))
 #define SPECIAL(C) ((C == '<') || (C == '>'))
 
-	// utf8_advance(&p, parser->pos);
-	// printf("\n'%s'\n", parser->source);
-	// printf("%zu\n", parser->pos);
-
-	int len;
+	u8 enc[4];
+	const u8 *current_enc = enc;
+	int len = 0;
 	uint32_t codepoint = 0;
 	*parse_child_nodes = 1;
 
 	ADVANCE();
 
 	// skip all useless symbols so we can proceed to parsing
-	while (parser->pos < parser->len) {
-		if (USELESS(codepoint)) {
-			ADVANCE();
-			continue;
-		}
-		break;
+	while (!parser->eof && USELESS(codepoint)) {
+		ADVANCE();
 	}
 
-	// collecting node name, properties etc.
 	if (codepoint != '<') {
 		if (SPECIAL(codepoint)) {
 			APPEND_ERROR("unexpected special symbol at line %zu", parser->line);
@@ -116,55 +122,66 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		}
 		// node is not complex, just collecting text until we encounter some special symbols
 		node->is_complex = 0;
-		while (!SPECIAL(codepoint)) {
-			if (codepoint == '\n') {
+		while (!SPECIAL(codepoint) && !parser->eof) {
+			if (USELESS(codepoint) && codepoint != ' ') {
 				ADVANCE();
 				continue;
 			}
 
-			const u8 *c = parser->source - len;
 			if (codepoint == '&') {
-				const u8* entity_start = parser->source;
-				const u8* entity_end = entity_start;
 				ADVANCE();
 				while (codepoint != ';') {
-					entity_end++;
+					if (codepoint == '&') {
+						APPEND_ERROR("unexpected '&' in entity name at line %zu", parser->line);
+						return VL_ERROR;
+					}
+					if (len >= 1) VL_DA_APPEND(parser->entity_name, current_enc[0]);
+					if (len >= 2) VL_DA_APPEND(parser->entity_name, current_enc[1]);
+					if (len >= 3) VL_DA_APPEND(parser->entity_name, current_enc[2]);
+					if (len >= 4) VL_DA_APPEND(parser->entity_name, current_enc[3]);
 					ADVANCE();
 				}
+				VL_DA_APPEND_CONST(parser->entity_name, u8, 0);
 				ADVANCE(); // skip ';'
 				VlXMLEntity* search_entity = NULL;
 				for (size_t i = 0; i < sizeof(s_entities) / sizeof(*s_entities); i++) {
 					VlXMLEntity* entity = s_entities + i;
-					if ((size_t)(entity_end - entity_start) != strlen(entity->name)) continue;
-					if (memcmp(entity->name, entity_start, strlen(entity->name)) == 0) {
+					if (utf8_strlen(parser->entity_name) != utf8_strlen(entity->name)) continue;
+					if (memcmp(entity->name, parser->entity_name, utf8_strlen(entity->name)) == 0) {
 						search_entity = entity;
 						break;
 					}
 				}
 				if (!search_entity) {
-					APPEND_ERROR("unknown entity %.*s at line %zu", (unsigned int)(entity_end - entity_start), entity_start, parser->line);
+					APPEND_ERROR("unknown entity %s at line %zu", parser->entity_name, parser->line);
+					VL_DA_RESET(parser->entity_name);
 					return VL_ERROR;
 				}
+				VL_DA_RESET(parser->entity_name);
 				const u8* entity_p = search_entity->value;
 				int entity_len = 0;
 				u32 entity_cp = 0;
 				while ((entity_cp = utf8_decode(&entity_p, &entity_len))) {
 					const u8* entity_c = entity_p - entity_len;
-					if (entity_len >= 1) VL_DA_APPEND_CONST(node->text, char, *entity_c);
-					if (entity_len >= 2) VL_DA_APPEND_CONST(node->text, char, *(entity_c + 1));
-					if (entity_len >= 3) VL_DA_APPEND_CONST(node->text, char, *(entity_c + 2));
-					if (entity_len >= 4) VL_DA_APPEND_CONST(node->text, char, *(entity_c + 3));
+					if (entity_len >= 1) VL_DA_APPEND_CONST(node->text, char, entity_c[0]);
+					if (entity_len >= 2) VL_DA_APPEND_CONST(node->text, char, entity_c[1]);
+					if (entity_len >= 3) VL_DA_APPEND_CONST(node->text, char, entity_c[2]);
+					if (entity_len >= 4) VL_DA_APPEND_CONST(node->text, char, entity_c[3]);
 				}
 				continue;
 			}
-			if (len >= 1) VL_DA_APPEND_CONST(node->text, char, *c);
-			if (len >= 2) VL_DA_APPEND_CONST(node->text, char, *(c + 1));
-			if (len >= 3) VL_DA_APPEND_CONST(node->text, char, *(c + 2));
-			if (len >= 4) VL_DA_APPEND_CONST(node->text, char, *(c + 3));
+			if (len >= 1) VL_DA_APPEND(node->text, current_enc[0]);
+			if (len >= 2) VL_DA_APPEND(node->text, current_enc[1]);
+			if (len >= 3) VL_DA_APPEND(node->text, current_enc[2]);
+			if (len >= 4) VL_DA_APPEND(node->text, current_enc[3]);
 
 			ADVANCE();
 		}
-		parser->source -= len;
+		if (parser->source) {
+			parser->source -= len;
+		} else {
+			fseek(parser->file.f, -len, SEEK_CUR);
+		}
 		VL_DA_APPEND_CONST(node->text, char, 0);
 		for (size_t i = VL_DA_LENGTH(node->text); i --> 0;) {
 			if (USELESS(node->text[i]) || node->text[i] == '\0') continue;
@@ -187,7 +204,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 	char comment_level = 0;
 	char special_level = 0;
 	node->is_complex = 1;
-	while (parser->pos < parser->len) {
+	while (!parser->eof) {
 		if (USELESS(codepoint) && comment_level != 0 && comment_level < 3) {
 			APPEND_ERROR("invalid beginning of comment tag at line %zu", parser->line);
 			return VL_ERROR;
@@ -327,45 +344,52 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		else if (parser->state == COLLECTING_PROPERTY_VALUE)
 			target_array = &parser->property_value;
 
-		const u8 *c = parser->source - len;
 		if (codepoint == '&') {
-			const u8 *entity_start = parser->source;
-			const u8 *entity_end = entity_start;
 			ADVANCE();
 			while (codepoint != ';') {
-				entity_end++;
+				if (codepoint == '&') {
+					APPEND_ERROR("unexpected '&' in entity name at line %zu", parser->line);
+					return VL_ERROR;
+				}
+				if (len >= 1) VL_DA_APPEND(parser->entity_name, current_enc[0]);
+				if (len >= 2) VL_DA_APPEND(parser->entity_name, current_enc[1]);
+				if (len >= 3) VL_DA_APPEND(parser->entity_name, current_enc[2]);
+				if (len >= 4) VL_DA_APPEND(parser->entity_name, current_enc[3]);
 				ADVANCE();
 			}
+			VL_DA_APPEND_CONST(parser->entity_name, u8, 0);
 			ADVANCE(); // skip ';'
-			VlXMLEntity *search_entity = NULL;
+			VlXMLEntity* search_entity = NULL;
 			for (size_t i = 0; i < sizeof(s_entities) / sizeof(*s_entities); i++) {
-				VlXMLEntity *entity = s_entities + i;
-				if ((size_t) (entity_end - entity_start) != strlen(entity->name)) continue;
-				if (memcmp(entity->name, entity_start, strlen(entity->name)) == 0) {
+				VlXMLEntity* entity = s_entities + i;
+				if (utf8_strlen(parser->entity_name) != utf8_strlen(entity->name)) continue;
+				if (strcmp(parser->entity_name, entity->name) == 0) {
 					search_entity = entity;
 					break;
 				}
 			}
 			if (!search_entity) {
-				APPEND_ERROR("unknown entity %.*s at line %zu", (unsigned int) (entity_end - entity_start), entity_start, parser->line);
+				APPEND_ERROR("unknown entity %s at line %zu", parser->entity_name, parser->line);
+				VL_DA_RESET(parser->entity_name);
 				return VL_ERROR;
 			}
-			const u8 *entity_p = search_entity->value;
+			VL_DA_RESET(parser->entity_name);
+			const u8* entity_p = search_entity->value;
 			int entity_len = 0;
 			u32 entity_cp = 0;
 			while ((entity_cp = utf8_decode(&entity_p, &entity_len))) {
-				const u8 *entity_c = entity_p - entity_len;
-				if (entity_len >= 1) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *entity_c));
-				if (entity_len >= 2) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(entity_c + 1)));
-				if (entity_len >= 3) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(entity_c + 2)));
-				if (entity_len >= 4) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(entity_c + 3)));
+				const u8* entity_c = entity_p - entity_len;
+				if (entity_len >= 1) VL_DA_APPEND_CONST(node->text, char, entity_c[0]);
+				if (entity_len >= 2) VL_DA_APPEND_CONST(node->text, char, entity_c[1]);
+				if (entity_len >= 3) VL_DA_APPEND_CONST(node->text, char, entity_c[2]);
+				if (entity_len >= 4) VL_DA_APPEND_CONST(node->text, char, entity_c[3]);
 			}
 			continue;
 		}
-		if (len >= 1) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *c));
-		if (len >= 2) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(c + 1)));
-		if (len >= 3) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(c + 2)));
-		if (len >= 4) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, *(c + 3)));
+		if (len >= 1) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, current_enc[0]));
+		if (len >= 2) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, current_enc[1]));
+		if (len >= 3) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, current_enc[2]));
+		if (len >= 4) VL_DA_INDIRECT(target_array, VL_DA_APPEND_CONST(INDIRECT, char, current_enc[3]));
 
 		ADVANCE();
 	}
@@ -407,7 +431,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode *node, VlXMLParser *parser, VlXML *xml, u8* error, size_t *error_offset) {
 	char parse_child_nodes;
 	VL_DA(VlXMLNode) stack;
-	VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR_AND_CAPACITY(stack, sizeof(VlXMLNode), VL_MALLOC, 24);
+	VL_DA_NEW_WITH_ELEMENT_SIZE_AND_ALLOCATOR_AND_CAPACITY(stack, sizeof(VlXMLNode), VL_MALLOC, 16);
 
 	VlXMLNode intermediate;
 	vl_xml_node_new(&intermediate);
@@ -441,7 +465,7 @@ static VlResult vl_xml_parser_parse_node_recursively(VlXMLNode *node, VlXMLParse
 		VL_DA_FREE(stack); \
 	} while (0)
 
-	while (parser->pos < parser->len) {
+	while (!parser->eof) {
 		VlResult parse_result = vl_xml_parser_parse_node(&intermediate, parser, xml, error, error_offset, &parse_child_nodes);
 
 		if (parse_result == VL_ERROR) {
@@ -581,11 +605,29 @@ VL_API void vl_xml_dump(VlXML *xml, int indent) {
 	vl_xml_node_dump_recursive(&xml->root, indent);
 }
 
-VL_API VlResult vl_xml_new(VlXML *xml, const u8* source, u8* error) {
+VL_API VlResult vl_xml_new(VlXML *xml, const u8 *source, u8 *error) {
 	VL_DA_NEW(xml->pi, VlXMLNode);
 
 	VlXMLParser parser;
 	vl_xml_parser_new(&parser, source);
+
+	size_t error_offset = 0;
+	if (vl_xml_parser_parse_node_recursively(&xml->root, &parser, xml, error, &error_offset)) {
+		vl_xml_parser_free(&parser);
+		return VL_ERROR;
+	}
+
+	vl_xml_parser_free(&parser);
+
+	return VL_SUCCESS;
+}
+
+VL_API VlResult vl_xml_new_from_file(VlXML *xml, VlFile *file, u8 *error) {
+	if (!xml || !file) return VL_ERROR;
+	VL_DA_NEW(xml->pi, VlXMLNode);
+
+	VlXMLParser parser;
+	vl_xml_parser_new_from_file(&parser, file);
 
 	size_t error_offset = 0;
 	if (vl_xml_parser_parse_node_recursively(&xml->root, &parser, xml, error, &error_offset)) {

@@ -36,7 +36,7 @@
 
 #include "velours.h"
 #include "da.h"
-#include "utf.h"
+#include "file.h"
 
 typedef struct {
 	// name and value ARE null-terminated utf-8 strings!
@@ -120,7 +120,8 @@ VL_API void vl_xml_node_dump_recursive(VlXMLNode *node, int indent);
 //     if (vl_xml_new(&xml, "<abc>...</abc>", error)) {
 //         printf("failed to parse xml: %s\n", error);
 //     }
-VL_API VlResult vl_xml_new(VlXML* xml, const u8* source, u8* error);
+VL_API VlResult vl_xml_new(VlXML* xml, const u8 *source, u8 *error);
+VL_API VlResult vl_xml_new_from_file(VlXML *xml, VlFile *file, u8 *error);
 
 // VlResult vl_xml_free(VlXML *xml)
 // frees given xml object

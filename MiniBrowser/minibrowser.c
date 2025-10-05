@@ -13,84 +13,13 @@
 #include <stdio.h>
 #include <time.h>
 
-/* const char* test_xml = "    " VL_STRINGIFY_VARIADIC(
-<?xml version="1.0" encoding="UTF-8"?>
-<?processing instruction="example"?>
-<!-- Top‑level comment -->
-<catalog xmlns:bk="http://example.com/book"
-         xmlns:auth="http://example.com/author"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://example.com/book book.xsd">
-
-  <!-- Entity declaration (internal DTD) -->
-  <!DOCTYPE catalog [
-    <!ENTITY copy "©">
-    <!ENTITY euro "€">
-  ]>
-
-  <!-- Mixed content with text and child elements -->
-  <description>
-    This catalog contains a collection of books and authors.
-    It includes <em>italic</em> and <strong>bold</strong> markup.
-  </description>
-
-  <!-- Simple element with attributes -->
-  <bk:book id="b001" genre="fiction" price="19.95" available="true">
-    <bk:title>The Great Adventure &amp; Beyond</bk:title>
-    <bk:author ref="a001"/>
-    <bk:published>2023-07-15</bk:published>
-
-    <!-- CDATA section (preserves special characters) -->
-    <bk:summary><![CDATA[
-      A thrilling tale of exploration. Characters say "Hello, world!" 
-      and encounter <unknown> tags that must be ignored by the parser.
-    ]]></bk:summary>
-
-    <!-- Nested element with namespace prefix -->
-    <auth:details>
-      <auth:name>Jane Doe</auth:name>
-      <auth:birthdate>1975-04-22</auth:birthdate>
-      <auth:bio>Author of several best‑selling novels &copy; 2024.</auth:bio>
-    </auth:details>
-
-    <!-- Empty element (self‑closing) -->
-    <bk:rating/>
-  </bk:book>
-
-  <!-- Another book with different attribute types -->
-  <bk:book id="b002" genre="non-fiction" price="0" available="false">
-    <bk:title>Understanding XML</bk:title>
-    <bk:author ref="a002"/>
-    <bk:published>2020-01-01</bk:published>
-    <bk:summary>Learn XML basics, DTDs, schemas, and best practices.</bk:summary>
-    <bk:pages>350</bk:pages>
-    <bk:price currency="EUR">&euro;0.00</bk:price>
-  </bk:book>
-
-  <!-- Author definitions referenced above -->
-  <auth:author id="a001">
-    <auth:name>John Smith</auth:name>
-    <auth:email>john.smith@example.com</auth:email>
-    <auth:affiliation>Example University</auth:affiliation>
-  </auth:author>
-
-  <auth:author id="a002">
-    <auth:name>Emily Johnson</auth:name>
-    <auth:email>emily.j@example.org</auth:email>
-    <auth:affiliation>Tech Press</auth:affiliation>
-  </auth:author>
-
-  <!-- Comment inside the root -->
-  <!-- End of catalog -->
-</catalog>
-) "    "; */
-
+/*
 const char* test_xml =  VL_STRINGIFY_VARIADIC(
 <?xml version="1.0"?>
 <customers>
-   <customer id="&quot;some guy&apos;s id&quot;">
+   <customer id="&quot;sAome guy&apos;s id&quot;">
         <name person>
-               &quot;some guy&apos;s name &amp; co.&quot;
+               &quot;sSome guy&apos;s name &amp; co.&quot;
         </name>
     </customer>
    <customer id="55000">
@@ -114,6 +43,11 @@ const char* test_xml =  VL_STRINGIFY_VARIADIC(
       </address>
    </customer>
 </customers>
+);
+*/
+
+const char *test_xml = VL_STRINGIFY_VARIADIC(
+<test>Hello, World!</test>
 );
 
 void da_test(void) {
@@ -215,25 +149,22 @@ void file_test(void) {
 void xml_test(void) {
     printf("initial memory usage: %zu\n", vl_get_memory_usage());
 
-    while (1) {
-        VlXML test;
-        char error[512];
-        VL_UNUSED(test);
-        VlResult end_result = vl_xml_new(&test, test_xml, error);
-        printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
-        if (end_result) {
-            printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
-            return;
-        }
-
-        vl_xml_dump(&test, 0);
-
-        vl_xml_free(&test);
-
-        printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
-        vl_dump_all_allocations();
-        break;
+    VlXML test;
+    char error[512];
+    VL_UNUSED(test);
+    VlResult end_result = vl_xml_new(&test, test_xml, error);
+    printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+    if (end_result) {
+        printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
+        return;
     }
+
+    vl_xml_dump(&test, 0);
+
+    vl_xml_free(&test);
+
+    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
+    vl_dump_all_allocations();
 }
 
 static VlGraphics *graphics = NULL;
@@ -287,6 +218,28 @@ void utf_test(void) {
     vl_file_free(&file);
 }
 
+void stream_test(void) {
+    VlFile f;
+    vl_file_new(&f, "ascii.txt", "r");
+
+    VlXML test;
+    char error[512];
+    VL_UNUSED(test);
+    VlResult end_result = vl_xml_new_from_file(&test, &f, error);
+    printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+    if (end_result) {
+        printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
+        return;
+    }
+
+    vl_xml_dump(&test, 0);
+
+    vl_xml_free(&test);
+
+    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
+    vl_dump_all_allocations();
+}
+
 int main(int argc, char **argv) {
     for (int i = 0; i < argc; i++) {
         printf("%s, ", argv[i]);
@@ -297,9 +250,10 @@ int main(int argc, char **argv) {
 
 	// da_test();
     // ht_test();
-    // file_test();
+    file_test();
     // xml_test();
-    utf_test();
+    // stream_test();
+    // utf_test();
     // window_test();
 
 	return VL_SUCCESS;
