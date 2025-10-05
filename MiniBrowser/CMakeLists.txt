@@ -20,3 +20,5 @@ if(WIN32)
 endif()
 
 configure_file(30mb.xml ${CMAKE_BINARY_DIR}/30mb.xml COPYONLY)
+configure_file(utf8.txt ${CMAKE_BINARY_DIR}/utf8.txt COPYONLY)
+configure_file(ascii.txt ${CMAKE_BINARY_DIR}/ascii.txt COPYONLY)

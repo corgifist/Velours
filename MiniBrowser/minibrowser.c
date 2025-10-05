@@ -191,7 +191,10 @@ void ht_test(void) {
 void file_test(void) {
     VL_DA(u8) content;
 
-    if (vl_file_read("./30mb.xml", &content)) {
+    VlFile file;
+    vl_file_new(&file, "30mb.xml", "r");
+
+    if (vl_file_read_whole(&file, &content)) {
         printf("failed to read 30mb.xml\n");
         return;
     }
@@ -204,6 +207,7 @@ void file_test(void) {
     }
     VL_DA_FREE(content);
     printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+    vl_file_free(&file);
     vl_dump_all_allocations();
 
 }
@@ -269,6 +273,20 @@ void window_test(void) {
     vl_graphics_terminate();
 }
 
+void utf_test(void) {
+    VlFile file;
+    vl_file_new(&file, "utf8.txt", "rb");
+    printf("bom: %i\n", file.bom);
+    u32 cp;
+    while ((cp = vl_file_read_codepoint(&file))) {
+        u8 enc[4];
+        int len = utf8_encode(cp, enc);
+        printf("%.*s", len, enc);
+    }
+    printf("\n");
+    vl_file_free(&file);
+}
+
 int main(int argc, char **argv) {
     for (int i = 0; i < argc; i++) {
         printf("%s, ", argv[i]);
@@ -280,7 +298,8 @@ int main(int argc, char **argv) {
 	// da_test();
     // ht_test();
     // file_test();
-    xml_test();
+    // xml_test();
+    utf_test();
     // window_test();
 
 	return VL_SUCCESS;

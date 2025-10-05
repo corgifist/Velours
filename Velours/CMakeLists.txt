@@ -2,7 +2,6 @@
 project(Velours LANGUAGES C CXX)
 
 set(Velours_Sources
-	velours.c
 	velours.h
 	da.h
 	memory.c
@@ -11,7 +10,8 @@ set(Velours_Sources
 	ht.h
 	file.c
 	file.h
-	utf.h)
+	utf.h
+)
 
 add_subdirectory(xml)
 add_subdirectory(platform)
