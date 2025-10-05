@@ -2,21 +2,28 @@
 project(Velours LANGUAGES C CXX)
 
 set(Velours_Sources
+	memory.c
+	ht.c
+	file.c
+)
+
+set(Velours_Headers
 	velours.h
 	da.h
-	memory.c
-	memory.h 
-	ht.c
-	ht.h
-	file.c
 	file.h
 	utf.h
+	ht.h
+	memory.h 
 )
 
 add_subdirectory(xml)
 add_subdirectory(platform)
 
-add_library(Velours ${Velours_Sources})
+if(BUILD_SHARED_LIBS)
+	add_library(Velours SHARED ${Velours_Sources} ${Velours_Headers})
+else()
+	add_library(Velours STATIC ${Velours_Sources} ${Velours_Headers})
+endif()
 target_compile_definitions(Velours PRIVATE PROPERTIES VELOURS_EXPORT)
 
 if(BUILD_SHARED_LIBS)

@@ -44,7 +44,7 @@
 #define VL_API VL_EXTERN_C __declspec(dllimport)
 #endif // VELOURS_EXPPORT
 #else
-#define VL_API
+#define VL_API VL_EXTERN_C
 #endif // defined(WIN) && defined(VELOURS_SHARED)
 
 #define VL_SUCCESS 0
