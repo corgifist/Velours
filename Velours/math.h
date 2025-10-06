@@ -1,3 +1,6 @@
+/*
+	math.h - different math utilities like VlRect and VlRGBA
+*/
 #ifndef VELOURS_MATH_H
 #define VELOURS_MATH_H
 

@@ -6,129 +6,109 @@
 #ifdef VELOURS_MANAGED_MALLOC
 
 static size_t s_allocated = 0;
+static size_t s_allocations = 0;
 
-typedef struct {
-	size_t size;
-} VlAllocHeader;
-
-typedef struct {
+struct VlAllocInfo {
 	void *ptr;
 	size_t size;
 	const char *file;
 	size_t line;
-} VlAllocInfo;
+	struct VlAllocInfo *prev, *next;
+};
 
-VL_HT_HASH(VlAllocInfo) {
-	return (uint64_t) (size_t) ((VlAllocInfo*) p)->ptr;
-}
+#define VL_ALLOC_INFO(PTR, SIZE, FILE, LINE) \
+	((struct VlAllocInfo) {.ptr = (void*) ((char*) (PTR) + sizeof(struct VlAllocInfo)), .size = (SIZE), .file = (FILE), .line = (LINE), .prev = NULL, .next = NULL})
 
-static VL_HT(void*, VlAllocInfo) s_allocs;
 static int s_level = VL_MEMORY_ONLY_ERRORS;
 
-#define VL_MEMORY_DEFAULT_CAPACITY 512
-
-// do NOT use managed malloc when using dynamic arrays here
-// so we don't get stuck in a loop where vl_malloc calls vl_malloc and so on
-#define CHECK_ALLOCS() \
-	if (!s_allocs) VL_HT_NEW_WITH_ALLOCATOR_AND_SIZE_AND_HASH_FUNCTION_AND_CAPACITY(s_allocs, sizeof(void*), sizeof(VlAllocInfo), malloc, vl_ht_hash_VlPtr, VL_MEMORY_DEFAULT_CAPACITY);
+static struct VlAllocInfo s_root = { 0 };
+static struct VlAllocInfo *s_first = &s_root;
+static struct VlAllocInfo *s_last = &s_root;
 
 VL_API void *vl_malloc(const char *file, size_t line, size_t size) {
 	if (!size) return NULL;
-	CHECK_ALLOCS();
 	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_malloc(%zu)\n", file, line, size);
-	void *res = malloc(size + sizeof(VlAllocHeader));
-	if (res) s_allocated += size;
+	struct VlAllocInfo* res = malloc(size + sizeof(struct VlAllocInfo));
 	if (res) {
-		((VlAllocHeader*) res)->size = size;
+		s_allocated += size;
+		s_allocations++;
 
-		VlAllocInfo info;
-		info.ptr = (char*) res + sizeof(VlAllocHeader);
-		info.size = size;
-		info.file = file;
-		info.line = line;
-
-		VL_HT_PUT_WITH_ALLOCATOR(s_allocs, info.ptr, info, realloc);
+		*res = VL_ALLOC_INFO(res, size, file, line);
+		
+		res->next = NULL;
+		res->prev = s_last;
+		s_last->next = res;
+		s_last = res;
 	}
-	return res ? (char*) res + sizeof(VlAllocHeader) : NULL;
-}
-
-VL_API void *vl_calloc(const char *file, size_t line, size_t count, size_t size) {
-	if (size * count == 0) return NULL;
-	CHECK_ALLOCS();
-	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_callloc(%zu, %zu)\n", file, line, count, size);
-	void *res = malloc(size * count + sizeof(VlAllocHeader));
-	if (res) s_allocated += size * count;
-	if (res) memset(res, 0, size * count + sizeof(VlAllocHeader));
-	if (res) {
-		((VlAllocHeader*) res)->size = size * count;
-
-		VlAllocInfo info;
-		info.ptr = (char*) res + sizeof(VlAllocHeader);
-		info.size = size * count;
-		info.file = file;
-		info.line = line;
-
-		VL_HT_PUT_WITH_ALLOCATOR(s_allocs, info.ptr, info, realloc);
-	}
-	return res ? (char*) res + sizeof(VlAllocHeader) : NULL;
+	return res ? res->ptr : NULL;
 }
 
 VL_API void *vl_realloc(const char *file, size_t line, void *mem, size_t new_size) {
 	if (!mem) return NULL;
-	CHECK_ALLOCS();
-	size_t old_size = ((VlAllocHeader*) ((char*) mem - sizeof(VlAllocHeader)))->size;
+	struct VlAllocInfo *old_info = (struct VlAllocInfo*) ((char*) mem - sizeof(struct VlAllocInfo));
+	struct VlAllocInfo* prev = old_info->prev;
+	struct VlAllocInfo* next = old_info->next;
+	size_t old_size = old_info->size;
 	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_realloc(%p, %zu), old size: %zu\n", file, line, mem, new_size, old_size);
-	void* res = realloc((char*) mem - sizeof(VlAllocHeader), new_size + sizeof(VlAllocHeader));
-	if (res) {
-		((VlAllocHeader*) res)->size = new_size;
-
-		char success = 0;
-		VL_HT_DELETE(s_allocs, mem, success);
-		if (!success && s_level >= VL_MEMORY_ONLY_ERRORS) printf("failed to remove allocation %p from s_allocs\n", mem);
-		if (!success) exit(VL_ERROR);
-
-		VlAllocInfo info;
-		info.ptr = (char*) res + sizeof(VlAllocHeader);
-		info.size = new_size;
-		info.file = file;
-		info.line = line;
-
-		VL_HT_PUT_WITH_ALLOCATOR(s_allocs, info.ptr, info, realloc);
+	if (!old_info->ptr && s_level >= VL_MEMORY_ONLY_ERRORS) {
+		printf("possible realloc of NULL pointer: %s(%zu)\n", file, line);
+		return NULL;
 	}
-	if (res) s_allocated += new_size - old_size;
-	return res ? (char*) res + sizeof(VlAllocHeader) : NULL;
+	struct VlAllocInfo* res = realloc(old_info, new_size + sizeof(struct VlAllocInfo));
+	if (res) {
+		s_allocated += new_size - old_size;
+
+		*res = VL_ALLOC_INFO(res, new_size, file, line);
+		res->prev = prev;
+		res->next = next;
+
+		res->prev->next = res;
+		if (res->next) {
+			res->next->prev = res;
+		} else {
+			s_last = res;
+		}
+	}
+	return res ? res->ptr : NULL;
 }
 
 VL_API void vl_free(const char *file, size_t line, void *mem) {
 	if (!mem) return;
-	CHECK_ALLOCS();
-	size_t size = ((VlAllocHeader*) ((char*) mem - sizeof(VlAllocHeader)))->size;
+	size_t size = ((struct VlAllocInfo*) ((char*) mem - sizeof(struct VlAllocInfo)))->size;
 	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_free(%p), alloc size: %zu\n", file, line, mem, size);
-	char success = 0;
-	VL_HT_DELETE(s_allocs, mem, success);
-	if (!success && s_level >= VL_MEMORY_ONLY_ERRORS) {
-		printf("failed to remove allocation %p from s_allocs\n", mem);
+	struct VlAllocInfo *info = (struct VlAllocInfo*) ((char*) mem - sizeof(struct VlAllocInfo));
+	if (!info->ptr && s_level >= VL_MEMORY_ONLY_ERRORS) {
+		printf("possible double free: %s(%zu)\n", file, line);
+		return;
 	}
-	if (!success) exit(VL_ERROR);
-	free(((char*) mem - sizeof(VlAllocHeader)));
+	info->prev->next = info->next;
+	if (info->next) info->next->prev = info->prev;
+	else s_last = info->prev;
+	info->ptr = NULL;
+	free(info);
 	s_allocated -= size;
+	s_allocations--;
 }
 
 VL_API void vl_memory_set_logging_level(int level) {
 	s_level = level;
 }
 
-VL_API size_t vl_get_memory_usage(void) {
+VL_API size_t vl_memory_get_usage(void) {
 	return s_allocated;
 }
 
-VL_API void vl_dump_all_allocations(void) {
-	VL_HT(void*, VlAllocInfo) iterator_pos = s_allocs;
-	VlHTEntry entry;
-	printf("%zu allocation(s):\n", VL_HT_HEADER(s_allocs)->count);
-	while (vl_ht_iterate(s_allocs, &iterator_pos, &entry)) {
-		VlAllocInfo *alloc = (VlAllocInfo*) entry.value;
-		printf("%s(%zu) %zu bytes, %p\n", alloc->file, alloc->line, alloc->size, alloc->ptr);
+VL_API void vl_memory_dump(void) {
+	struct VlAllocInfo* p = s_first;
+	printf("%zu allocation(s):\n", s_allocations);
+	size_t check = 0;
+	while ((p = p->next)) {
+		check++;
+		printf("%s(%zu) %zu bytes, %p\n", p->file, p->line, p->size, p->ptr);
+	}
+	if (check != s_allocations) {
+		printf("managed malloc corruption\n");
+		exit(1);
 	}
 }
 
@@ -138,10 +118,10 @@ VL_API void vl_memory_set_logging_level(int level) {
 	VL_UNUSED(level);
 }
 
-VL_API size_t vl_get_memory_usage(void) {
+VL_API size_t vl_memory_get_usage(void) {
 	return 0;
 }
 
-VL_API void vl_dump_all_allocations(void) {}
+VL_API void vl_memory_dump(void) {}
 
 #endif// VELOURS_MANAGED_MALLOC

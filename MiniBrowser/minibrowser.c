@@ -51,28 +51,27 @@ const char *test_xml = VL_STRINGIFY_VARIADIC(
 );
 
 void da_test(void) {
-    printf("initial memory usage: %zu\n", vl_get_memory_usage());
+    printf("initial memory usage: %zu\n", vl_memory_get_usage());
 	int *test;
 	VL_DA_NEW(test, int);
-    printf("after da creation memory usage: %zu\n", vl_get_memory_usage());
+    printf("after da creation memory usage: %zu\n", vl_memory_get_usage());
 	printf("%p\n", test);
 
 	for (int i = 0; i < 10000; i++) {
 		VL_DA_APPEND_CONST(test, int, i);
 	}
 
-    printf("peak memory usage: %zu\n", vl_get_memory_usage());
-
+    printf("peak memory usage: %zu\n", vl_memory_get_usage());
+    vl_memory_dump();
     VL_DA_FREE(test);
-
-    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
+    printf("cleanup memory usage: %zu\n", vl_memory_get_usage());
 }
 
 void ht_test(void) {
-    printf("initial memory usage: %zu\n", vl_get_memory_usage());
+    printf("initial memory usage: %zu\n", vl_memory_get_usage());
     VL_HT(int, int) ht;
     VL_HT_NEW(ht, int, int);
-    printf("after ht creation memory usage: %zu\n", vl_get_memory_usage());
+    printf("after ht creation memory usage: %zu\n", vl_memory_get_usage());
 
     srand((unsigned int) time(NULL));
 
@@ -82,8 +81,8 @@ void ht_test(void) {
         VL_HT_PUT(ht, key, val);
     }
 
-    printf("\n");
-    vl_dump_all_allocations();
+    printf("intermediate (usage: %zu):\n", vl_memory_get_usage());
+    vl_memory_dump();
     printf("\n");
 
     VlHTEntry entry;
@@ -119,7 +118,7 @@ void ht_test(void) {
 
     VL_HT_FREE(ht);
 
-    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
+    printf("cleanup memory usage: %zu\n", vl_memory_get_usage());
 }
 
 void file_test(void) {
@@ -131,20 +130,20 @@ void file_test(void) {
         printf("failed to parse 30mb.xml\n");
         return;
     }
-    printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+    printf("memory usage after parsing: %zu\n", vl_memory_get_usage());
     vl_file_free(&file);
     vl_xml_free(&xml);
-    vl_dump_all_allocations();
+    vl_memory_dump();
 }
 
 void xml_test(void) {
-    printf("initial memory usage: %zu\n", vl_get_memory_usage());
+    printf("initial memory usage: %zu\n", vl_memory_get_usage());
 
     VlXML test;
     char error[512];
     VL_UNUSED(test);
     VlResult end_result = vl_xml_new(&test, test_xml, error);
-    printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+    printf("memory usage after parsing: %zu\n", vl_memory_get_usage());
     if (end_result) {
         printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
         return;
@@ -154,8 +153,8 @@ void xml_test(void) {
 
     vl_xml_free(&test);
 
-    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
-    vl_dump_all_allocations();
+    printf("cleanup memory usage: %zu\n", vl_memory_get_usage());
+    vl_memory_dump();
 }
 
 static VlGraphics *graphics = NULL;
@@ -217,7 +216,7 @@ void stream_test(void) {
     char error[512];
     VL_UNUSED(test);
     VlResult end_result = vl_xml_new_from_file(&test, &f, error);
-    printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
+    printf("memory usage after parsing: %zu\n", vl_memory_get_usage());
     if (end_result) {
         printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
         return;
@@ -227,9 +226,51 @@ void stream_test(void) {
 
     vl_xml_free(&test);
 
-    printf("cleanup memory usage: %zu\n", vl_get_memory_usage());
-    vl_dump_all_allocations();
+    printf("cleanup memory usage: %zu\n", vl_memory_get_usage());
+    vl_memory_dump();
 }
+
+void fast_mmalloc_test(void) {
+    printf("initial memory usage: %zu\n", vl_memory_get_usage());
+
+    VL_MALLOC(sizeof(int));
+    int *p4 = VL_MALLOC(sizeof(int) * 2);
+    VL_MALLOC(sizeof(int) * 3);
+    VL_MALLOC(sizeof(int) * 4);
+    int* p1 =  VL_MALLOC(sizeof(int) * 5);
+    VL_MALLOC(sizeof(int) * 6);
+    int *p2 = VL_MALLOC(sizeof(int) * 7);
+    VL_MALLOC(sizeof(int) * 8);
+    VL_MALLOC(sizeof(int) * 9);
+
+    VL_FREE(p1);
+
+    for (int i = 0; i < 100; i++) {
+        int* t = VL_MALLOC(sizeof(int));
+        p2 = VL_REALLOC(p2, i * 100 + 500);
+        VL_FREE(t);
+    }
+
+    VL_FREE(p4);
+
+    vl_memory_dump();
+
+    printf("after allocating memory usage: %zu\n", vl_memory_get_usage());
+}
+void mmalloc_troubleshoot(void) {
+    int *normal3 = VL_MALLOC(sizeof(int) * 24);
+
+    vl_memory_dump();
+
+    for (int i = 0; i < 240; i++) {
+        normal3 = VL_REALLOC(normal3, i * 24 + 4);
+    }
+
+    VL_FREE(normal3);
+
+    vl_memory_dump();
+}
+
 
 int main(int argc, char **argv) {
     for (int i = 0; i < argc; i++) {
@@ -245,7 +286,5 @@ int main(int argc, char **argv) {
     // xml_test();
     // stream_test();
     // utf_test();
-    // window_test();
-
 	return VL_SUCCESS;
 }

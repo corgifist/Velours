@@ -60,13 +60,19 @@ static VL_DA(u8) __stdlib_free_utf16_to_utf8(const u16 * s) {
 	return result;
 }
 
+#ifndef NDEBUG
+#define ENABLE_HEAP_SECURITY() HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0)
+#else
+#define ENABLE_HEAP_SECURITY() do {} while (0)
+#endif // NDEBUG
+
 #define main(...) \
 	main(__VA_ARGS__); \
 	int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR pCmdLine, _In_ int nCmdShow) { \
 		VL_UNUSED(hPrevInstance); \
 		VL_UNUSED(pCmdLine); \
 		VL_UNUSED(nCmdShow); \
-		HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0); \
+		ENABLE_HEAP_SECURITY(); \
 		CREATE_CONSOLE(); \
 		VlWinInstance win; \
 		win.hInstance = hInstance; \
