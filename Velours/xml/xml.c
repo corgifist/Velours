@@ -18,6 +18,7 @@ typedef struct {
 	VL_DA(u8) entity_name;
 
 	char state;
+	char last_node_was_simple;
 } VlXMLParser;
 
 typedef struct {
@@ -44,6 +45,7 @@ static VlResult vl_xml_parser_new(VlXMLParser *parser, const u8 *source) {
 	parser->property_name = NULL;
 	parser->state = COLLECTING_NOTHING;
 	parser->eof = 0;
+	parser->last_node_was_simple = 0;
 
 	VL_DA_NEW(parser->node_name, u8);
 	VL_DA_NEW(parser->property_name, u8);
@@ -115,7 +117,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		ADVANCE();
 	}
 
-	if (codepoint != '<') {
+	if (codepoint != '<' && !parser->last_node_was_simple) {
 		if (SPECIAL(codepoint)) {
 			APPEND_ERROR("unexpected special symbol at line %zu", parser->line);
 			return VL_ERROR;
@@ -177,11 +179,7 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 
 			ADVANCE();
 		}
-		if (parser->source) {
-			parser->source -= len;
-		} else {
-			fseek(parser->file.f, -len, SEEK_CUR);
-		}
+		parser->last_node_was_simple = 1;
 		VL_DA_APPEND_CONST(node->text, char, 0);
 		for (size_t i = VL_DA_LENGTH(node->text); i --> 0;) {
 			if (USELESS(node->text[i]) || node->text[i] == '\0') continue;
@@ -193,7 +191,8 @@ static VlResult vl_xml_parser_parse_node(VlXMLNode *node, VlXMLParser *parser, V
 		*parse_child_nodes = 0;
 		return VL_SUCCESS;
 	}
-	ADVANCE();
+	if (!parser->last_node_was_simple) ADVANCE();
+	parser->last_node_was_simple = 0;
 	parser->state = COLLECTING_NODE_NAME;
 
 	char block_attributes = 0;

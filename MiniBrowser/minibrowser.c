@@ -123,27 +123,18 @@ void ht_test(void) {
 }
 
 void file_test(void) {
-    VL_DA(u8) content;
-
     VlFile file;
     vl_file_new(&file, "30mb.xml", "r");
 
-    if (vl_file_read_whole(&file, &content)) {
-        printf("failed to read 30mb.xml\n");
-        return;
-    }
-    printf("memory usage after reading a file: %zu\n", vl_get_memory_usage());
-
     VlXML xml;
-    if (vl_xml_new(&xml, content, NULL)) {
+    if (vl_xml_new_from_file(&xml, &file, NULL)) {
         printf("failed to parse 30mb.xml\n");
         return;
     }
-    VL_DA_FREE(content);
     printf("memory usage after parsing: %zu\n", vl_get_memory_usage());
     vl_file_free(&file);
+    vl_xml_free(&xml);
     vl_dump_all_allocations();
-
 }
 
 void xml_test(void) {
