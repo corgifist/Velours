@@ -1,13 +1,14 @@
 ﻿#include "file.h"
+#include "memory.h"
 
-
-VL_API VlResult vl_file_new(VlFile* file, const u8* path, const u8* mode) {
-	if (!file) return VL_ERROR;
+VL_API VlFile *vl_file_new( const u8* path, const u8* mode) {
+	VlFile* file = VL_MALLOC(sizeof(VlFile));
+	if (!file) return NULL;
 	memset(file, 0, sizeof(VlFile));
 	FILE* f = fopen(path, mode);
 	if (!f) {
 		printf("failed to open file %s with mode %s, errno: %i\n", path, mode, errno);
-		return VL_ERROR;
+		return NULL;
 	}
 	file->f = f;
 	file->path = path;
@@ -44,7 +45,7 @@ VL_API VlResult vl_file_new(VlFile* file, const u8* path, const u8* mode) {
 		fseek(f, 4, SEEK_SET);
 	}
 
-	return VL_SUCCESS;
+	return file;
 }
 
 VL_API VlResult vl_file_read_whole(VlFile *file, VL_DA(char)* output) {
@@ -145,6 +146,6 @@ VL_API u32 vl_file_read_codepoint(VlFile* file) {
 VL_API VlResult vl_file_free(VlFile *file) {
 	if (!file) return VL_ERROR;
 	if (file->f) fclose(file->f);
-	memset(file, 0, sizeof(VlFile));
+	VL_FREE(file);
 	return VL_SUCCESS;
 }

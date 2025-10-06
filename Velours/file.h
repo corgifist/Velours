@@ -29,7 +29,7 @@ typedef struct {
 	VlBOM bom;
 } VlFile;
 
-VL_API VlResult vl_file_new(VlFile *file, const u8* path, const u8 *mode);
+VL_API VlFile *vl_file_new(const u8* path, const u8 *mode);
 VL_API VlResult vl_file_read_whole(VlFile *file, VL_DA(char)* output);
 VL_API u32 vl_file_read_codepoint(VlFile* file);
 VL_API VlResult vl_file_free(VlFile *file);

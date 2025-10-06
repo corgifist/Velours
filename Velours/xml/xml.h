@@ -115,13 +115,13 @@ VL_API void vl_xml_node_dump_recursive(VlXMLNode *node, int indent);
 //     VL_SUCCESS if parsing succedded, otherwise VL_ERROR
 // 
 // usage:
-//     VlXML xml;
 //     char error[512];
-//     if (vl_xml_new(&xml, "<abc>...</abc>", error)) {
+//	   VlXML *xml = vl_xml_new("<abc>...</abc>", error);
+//     if (!xml) {
 //         printf("failed to parse xml: %s\n", error);
 //     }
-VL_API VlResult vl_xml_new(VlXML* xml, const u8 *source, u8 *error);
-VL_API VlResult vl_xml_new_from_file(VlXML *xml, VlFile *file, u8 *error);
+VL_API VlXML *vl_xml_new(const u8 *source, u8 *error);
+VL_API VlXML *vl_xml_new_from_file(VlFile *file, u8 *error);
 
 // VlResult vl_xml_free(VlXML *xml)
 // frees given xml object

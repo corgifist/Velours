@@ -604,7 +604,11 @@ VL_API void vl_xml_dump(VlXML *xml, int indent) {
 	vl_xml_node_dump_recursive(&xml->root, indent);
 }
 
-VL_API VlResult vl_xml_new(VlXML *xml, const u8 *source, u8 *error) {
+VL_API VlXML *vl_xml_new(const u8 *source, u8 *error) {
+	if (!source) return NULL;
+	VlXML *xml = VL_MALLOC(sizeof(VlXML));
+	if (!xml) return NULL;
+	memset(xml, 0, sizeof(VlXML));
 	VL_DA_NEW(xml->pi, VlXMLNode);
 
 	VlXMLParser parser;
@@ -613,16 +617,19 @@ VL_API VlResult vl_xml_new(VlXML *xml, const u8 *source, u8 *error) {
 	size_t error_offset = 0;
 	if (vl_xml_parser_parse_node_recursively(&xml->root, &parser, xml, error, &error_offset)) {
 		vl_xml_parser_free(&parser);
-		return VL_ERROR;
+		return NULL;
 	}
 
 	vl_xml_parser_free(&parser);
 
-	return VL_SUCCESS;
+	return xml;
 }
 
-VL_API VlResult vl_xml_new_from_file(VlXML *xml, VlFile *file, u8 *error) {
-	if (!xml || !file) return VL_ERROR;
+VL_API VlXML *vl_xml_new_from_file(VlFile *file, u8 *error) {
+	if (!file) return NULL;
+	VlXML* xml = VL_MALLOC(sizeof(VlXML));
+	if (!xml) return NULL;
+	memset(xml, 0, sizeof(VlXML));
 	VL_DA_NEW(xml->pi, VlXMLNode);
 
 	VlXMLParser parser;
@@ -631,12 +638,12 @@ VL_API VlResult vl_xml_new_from_file(VlXML *xml, VlFile *file, u8 *error) {
 	size_t error_offset = 0;
 	if (vl_xml_parser_parse_node_recursively(&xml->root, &parser, xml, error, &error_offset)) {
 		vl_xml_parser_free(&parser);
-		return VL_ERROR;
+		return NULL;
 	}
 
 	vl_xml_parser_free(&parser);
 
-	return VL_SUCCESS;
+	return xml;
 }
 
 VL_API VlResult vl_xml_free(VlXML *xml) {
@@ -646,6 +653,8 @@ VL_API VlResult vl_xml_free(VlXML *xml) {
 	VL_DA_FREE(xml->pi);
 
 	vl_xml_node_free(&xml->root);
+
+	VL_FREE(xml);
 
 	return VL_SUCCESS;
 }

@@ -122,36 +122,33 @@ void ht_test(void) {
 }
 
 void file_test(void) {
-    VlFile file;
-    vl_file_new(&file, "30mb.xml", "r");
+    VlFile *file = vl_file_new("30mb.xml", "r");
 
-    VlXML xml;
-    if (vl_xml_new_from_file(&xml, &file, NULL)) {
+    VlXML *xml = vl_xml_new_from_file(file, NULL);
+    if (!xml) {
         printf("failed to parse 30mb.xml\n");
         return;
     }
     printf("memory usage after parsing: %zu\n", vl_memory_get_usage());
-    vl_file_free(&file);
-    vl_xml_free(&xml);
+    vl_file_free(file);
+    vl_xml_free(xml);
     vl_memory_dump();
 }
 
 void xml_test(void) {
     printf("initial memory usage: %zu\n", vl_memory_get_usage());
 
-    VlXML test;
     char error[512];
-    VL_UNUSED(test);
-    VlResult end_result = vl_xml_new(&test, test_xml, error);
+    VlXML *test = vl_xml_new(test_xml, error);
     printf("memory usage after parsing: %zu\n", vl_memory_get_usage());
-    if (end_result) {
-        printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
+    if (!test) {
+        printf("end_result: %p;\nfailed to open test_xml!\n%s\n", test, error);
         return;
     }
 
-    vl_xml_dump(&test, 0);
+    vl_xml_dump(test, 0);
 
-    vl_xml_free(&test);
+    vl_xml_free(test);
 
     printf("cleanup memory usage: %zu\n", vl_memory_get_usage());
     vl_memory_dump();
@@ -195,79 +192,35 @@ void window_test(void) {
 }
 
 void utf_test(void) {
-    VlFile file;
-    vl_file_new(&file, "utf8.txt", "rb");
-    printf("bom: %i\n", file.bom);
+    VlFile *file = vl_file_new("utf8.txt", "rb");
+    printf("bom: %i\n", file->bom);
     u32 cp;
-    while ((cp = vl_file_read_codepoint(&file))) {
+    while ((cp = vl_file_read_codepoint(file))) {
         u8 enc[4];
         int len = utf8_encode(cp, enc);
         printf("%.*s", len, enc);
     }
     printf("\n");
-    vl_file_free(&file);
+    vl_file_free(file);
 }
 
 void stream_test(void) {
-    VlFile f;
-    vl_file_new(&f, "ascii.txt", "r");
+    VlFile* f = vl_file_new("ascii.txt", "r");
 
-    VlXML test;
     char error[512];
-    VL_UNUSED(test);
-    VlResult end_result = vl_xml_new_from_file(&test, &f, error);
+    VlXML *test = vl_xml_new_from_file(f, error);
     printf("memory usage after parsing: %zu\n", vl_memory_get_usage());
-    if (end_result) {
-        printf("end_result: %i;\nfailed to open test_xml!\n%s\n", end_result, error);
+    if (test) {
+        printf("end_result: %p;\nfailed to open test_xml!\n%s\n", test, error);
         return;
     }
 
-    vl_xml_dump(&test, 0);
+    vl_xml_dump(test, 0);
 
-    vl_xml_free(&test);
+    vl_xml_free(test);
+    vl_file_free(f);
 
     printf("cleanup memory usage: %zu\n", vl_memory_get_usage());
-    vl_memory_dump();
-}
-
-void fast_mmalloc_test(void) {
-    printf("initial memory usage: %zu\n", vl_memory_get_usage());
-
-    VL_MALLOC(sizeof(int));
-    int *p4 = VL_MALLOC(sizeof(int) * 2);
-    VL_MALLOC(sizeof(int) * 3);
-    VL_MALLOC(sizeof(int) * 4);
-    int* p1 =  VL_MALLOC(sizeof(int) * 5);
-    VL_MALLOC(sizeof(int) * 6);
-    int *p2 = VL_MALLOC(sizeof(int) * 7);
-    VL_MALLOC(sizeof(int) * 8);
-    VL_MALLOC(sizeof(int) * 9);
-
-    VL_FREE(p1);
-
-    for (int i = 0; i < 100; i++) {
-        int* t = VL_MALLOC(sizeof(int));
-        p2 = VL_REALLOC(p2, i * 100 + 500);
-        VL_FREE(t);
-    }
-
-    VL_FREE(p4);
-
-    vl_memory_dump();
-
-    printf("after allocating memory usage: %zu\n", vl_memory_get_usage());
-}
-void mmalloc_troubleshoot(void) {
-    int *normal3 = VL_MALLOC(sizeof(int) * 24);
-
-    vl_memory_dump();
-
-    for (int i = 0; i < 240; i++) {
-        normal3 = VL_REALLOC(normal3, i * 24 + 4);
-    }
-
-    VL_FREE(normal3);
-
     vl_memory_dump();
 }
 
