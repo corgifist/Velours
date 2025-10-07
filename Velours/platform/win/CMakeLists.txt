@@ -1,3 +1,7 @@
+if(ENABLE_SOFTWARE_BACKEND)
+	add_subdirectory(software)
+endif()
+
 set(Velours_Sources 
 	${Velours_Sources}
 	platform/win/window.c

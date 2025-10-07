@@ -4,6 +4,9 @@
 #ifndef VELOURS_MATH_H
 #define VELOURS_MATH_H
 
+#define VL_MIN(A, B) (((A) < (B)) ? (A) : (B))
+#define VL_MAX(A, B) (((A) < (B)) ? (B) : (A))
+
 typedef struct {
 	float x1, y1;
 	float x2, y2;

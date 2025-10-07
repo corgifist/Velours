@@ -46,18 +46,19 @@ typedef struct {
 	VlGraphicsBrushHandle handle;
 } VlGraphicsBrush;
 
-typedef VlResult(*VlGraphicsInitializeFunction)(void);
-typedef VlGraphics(*VlGraphicsNewFunction)(VlWindow);
+typedef VlResult (*VlGraphicsInitializeFunction)(void);
+typedef VlGraphics (*VlGraphicsNewFunction)(VlWindow);
 
-typedef VlResult(*VlGraphicsBeginFunction)(VlGraphics);
-typedef VlResult(*VlGraphicsClearFunction)(VlGraphics, VlRGBA);
-typedef VlResult(*VlGraphicsEndFunction)(VlGraphics);
+typedef VlResult (*VlGraphicsPresentationBeginFunction)(VlGraphics);
+typedef VlResult (*VlGraphicsBeginFunction)(VlGraphics);
+typedef VlResult (*VlGraphicsClearFunction)(VlGraphics, VlRGBA);
+typedef VlResult (*VlGraphicsEndFunction)(VlGraphics);
+typedef VlResult (*VlGraphicsPresentationEndFunction)(VlGraphics);
 
-typedef VlResult(*VlGraphicsPresentationBeginFunction)(VlGraphics, VlWindow);
-typedef VlResult(*VlGraphicsPresentationEndFunction)(VlGraphics, VlWindow);
+typedef VlResult (*VlGraphicsResizeFunction)(VlGraphics, int, int);
 
-typedef VlResult(*VlGraphicsFreeFunction)(VlGraphics);
-typedef VlResult(*VlGraphicsTerminateFunction)(void);
+typedef VlResult (*VlGraphicsFreeFunction)(VlGraphics);
+typedef VlResult (*VlGraphicsTerminateFunction)(void);
 
 
 // before calling vl_graphics_new, you should call vl_graphics_initialize
@@ -73,7 +74,9 @@ VL_API VlResult vl_graphics_free(VlGraphics graphics);
 VL_API VlResult vl_graphics_brush_new_solid(VlGraphics graphics, VlGraphicsBrush *brush, VlRGBA rgba);
 VL_API void vl_graphics_brush_free(VlGraphicsBrush* brush);
 
-VL_API void vl_graphics_resize(VlGraphics graphics, int w, int h);
+VL_API VlResult vl_graphics_resize(VlGraphics graphics, int w, int h);
+
+VL_API VlResult vl_graphics_presentation_begin(VlGraphics graphics);
 
 // VlResult vl_graphics_begin(VlGraphics graphics)
 // starts drawing on specified VlGraphics
@@ -98,6 +101,8 @@ VL_API VlResult vl_graphics_fill_rectangle(VlGraphics graphics, VlGraphicsBrush*
 //     VL_GRAPHICS_SHOULD_TERMINATE - device has been lost and you should replace your VlGraphics with a new one
 //     VL_ERROR - some other unexpected error
 VL_API VlResult vl_graphics_end(VlGraphics graphics);
+
+VL_API VlResult vl_graphics_presentation_end(VlGraphics graphics);
 
 // free all internal structures to avoid leaking memory
 // you should call this function only ONCE, and only if

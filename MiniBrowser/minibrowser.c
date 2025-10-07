@@ -156,6 +156,22 @@ void xml_test(void) {
 
 static VlWindow s_window;
 static VlGraphics s_graphics;
+
+void resize(VlWindow window) {
+    vl_graphics_resize(s_graphics, window->cw, window->ch);
+}
+
+void paint(VlWindow window) {
+    VL_UNUSED(window);
+    vl_graphics_presentation_begin(s_graphics);
+    vl_graphics_begin(s_graphics);
+
+    vl_graphics_clear(s_graphics, VL_RGBA(1, 0, 1, 1));
+    
+    vl_graphics_end(s_graphics);
+    vl_graphics_presentation_end(s_graphics);
+}
+
 void window_test(void) {
     s_window = vl_window_new("Velours Software Renderer Backend", 0, 0, 640, 480);
     if (!s_window) {
@@ -176,8 +192,13 @@ void window_test(void) {
         return;
     }
 
+    vl_window_set_paint_function(s_window, paint);
+    vl_window_set_resize_function(s_window, resize);
     vl_window_set_visible(s_window, 1);
     vl_window_message_loop(s_window);
+
+    vl_graphics_free(s_graphics);
+    vl_window_free(s_window);
 
     if (vl_graphics_terminate()) {
         printf("failed to terminate graphics!\n");
