@@ -5,11 +5,20 @@
 
 // VlWindow is a pointer to platform-specific window structure
 // e.g. VlWinWindow on windows
-typedef void* VlWindow;
+
+struct VlWindow {
+	// w, h - x, y, width and height of a window including title bar and etc.
+	int x, y, w, h;
+
+	// cx, cy, cw, ch - x, y, width and height of a window excluding title bar and etc.
+	int cx, cy, cw, ch;
+};
+
+typedef struct VlWindow* VlWindow;
 
 typedef void (*VlWindowPaintFunction)(VlWindow);
-typedef void (*VlWindowResizeFunction)(VlWindow, int, int);
-typedef void (*VlWindowMoveFunction)(VlWindow, int, int);
+typedef void (*VlWindowResizeFunction)(VlWindow);
+typedef void (*VlWindowMoveFunction)(VlWindow);
 
 VL_API VlWindow vl_window_new(const u8 *title, int x, int y, int w, int h);
 VL_API void vl_window_set_visible(VlWindow window, char visible);

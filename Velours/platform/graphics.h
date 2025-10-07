@@ -11,9 +11,21 @@
 
 #define VL_GRAPHICS_SHOULD_TERMINATE 8
 
+// enum of all available graphics backends
+typedef enum {
+	VL_GRAPHICS_BACKEND_SOFTWARE = 0,
+	VL_GRAPHICS_BACKEND_D2D = 1,
+	VL_GRAPHICS_BACKEND_COUNT = 2
+} VlGraphicsBackend;
+
 // VlGraphics is a pointer to platform-specific graphic infrastructure
 // e.g. VlWinGraphics on windows
-typedef void* VlGraphics;
+struct VlGraphics {
+	VlWindow window;
+	VlGraphicsBackend type;
+};
+
+typedef struct VlGraphics* VlGraphics;
 
 typedef void* VlGraphicsBrushHandle;
 
@@ -34,15 +46,29 @@ typedef struct {
 	VlGraphicsBrushHandle handle;
 } VlGraphicsBrush;
 
+typedef VlResult(*VlGraphicsInitializeFunction)(void);
+typedef VlGraphics(*VlGraphicsNewFunction)(VlWindow);
+
+typedef VlResult(*VlGraphicsBeginFunction)(VlGraphics);
+typedef VlResult(*VlGraphicsClearFunction)(VlGraphics, VlRGBA);
+typedef VlResult(*VlGraphicsEndFunction)(VlGraphics);
+
+typedef VlResult(*VlGraphicsPresentationBeginFunction)(VlGraphics, VlWindow);
+typedef VlResult(*VlGraphicsPresentationEndFunction)(VlGraphics, VlWindow);
+
+typedef VlResult(*VlGraphicsFreeFunction)(VlGraphics);
+typedef VlResult(*VlGraphicsTerminateFunction)(void);
+
+
 // before calling vl_graphics_new, you should call vl_graphics_initialize
-// so all the factories would be ready to be used
+// so the graphics backend you would like to use will be ready
 // note: you should call vl_graphics_initialize only ONCE
-VL_API void vl_graphics_initialize(void);
+VL_API VlResult vl_graphics_initialize(VlGraphicsBackend backend);
 
 // VlGraphics vl_graphics_new(VlWindow* window)
 // creates graphic infrastructure for specific window
 VL_API VlGraphics vl_graphics_new(VlWindow window);
-VL_API void vl_graphics_free(VlGraphics graphics);
+VL_API VlResult vl_graphics_free(VlGraphics graphics);
 
 VL_API VlResult vl_graphics_brush_new_solid(VlGraphics graphics, VlGraphicsBrush *brush, VlRGBA rgba);
 VL_API void vl_graphics_brush_free(VlGraphicsBrush* brush);
@@ -76,6 +102,6 @@ VL_API VlResult vl_graphics_end(VlGraphics graphics);
 // free all internal structures to avoid leaking memory
 // you should call this function only ONCE, and only if
 // you don't intend to use VlGraphics anymore
-VL_API void vl_graphics_terminate(void);
+VL_API VlResult vl_graphics_terminate(void);
 
 #endif // VELOURS_PLATFORM_GRAPHICS_H

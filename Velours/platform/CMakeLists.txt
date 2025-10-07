@@ -7,6 +7,7 @@ endif()
 set(Velours_Sources 
 	${Velours_Sources}
 	platform/instance.c
+	platform/graphics.c
 	PARENT_SCOPE
 )
 

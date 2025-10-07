@@ -43,6 +43,7 @@ VL_API VlWindow vl_window_new(const u8* title, int x, int y, int w, int h) {
 	}
 
 	VlWinWindow *window = VL_MALLOC(sizeof(VlWinWindow));
+	if (!window) return NULL;
 	if (window) memset(window, 0, sizeof(*window));
 	VL_DA(u16) u16_name = utf8_to_utf16(title);
 #define DEFAULT(X) (X ? X : CW_USEDEFAULT)
@@ -51,7 +52,7 @@ VL_API VlWindow vl_window_new(const u8* title, int x, int y, int w, int h) {
 		s_class_name,
 		(LPCWSTR) u16_name,
 		WS_OVERLAPPEDWINDOW,
-		DEFAULT(w), DEFAULT(h), DEFAULT(x), DEFAULT(y),
+		DEFAULT(x), DEFAULT(y), DEFAULT(w), DEFAULT(h),
 		NULL, NULL,
 		win->hInstance, window
 	);
@@ -65,7 +66,7 @@ VL_API VlWindow vl_window_new(const u8* title, int x, int y, int w, int h) {
 		return NULL;
 	}
 
-	return window;
+	return (VlWindow) window;
 }
 
 VL_API void vl_window_set_visible(VlWindow window, char visible) {
@@ -108,15 +109,27 @@ VL_API VlResult vl_window_free(VlWindow window) {
 	return VL_SUCCESS;
 }
 
-static LRESULT CALLBACK vl_window_proc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
+static LRESULT CALLBACK vl_window_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 	if (msg == WM_CREATE) {
-		LPCREATESTRUCT cr = (LPCREATESTRUCT) l;
-		VlWinWindow* win = (VlWinWindow*) cr->lpCreateParams;
+		LPCREATESTRUCT cr = (LPCREATESTRUCT) lp;
+		VlWindow win = (VlWindow) cr->lpCreateParams;
 		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) win);
-		win->x = cr->x;
-		win->y = cr->y;
-		win->w = cr->cx;
-		win->h = cr->cy;
+		RECT rect;
+		GetWindowRect(hwnd, &rect);
+		win->x = rect.left;
+		win->y = rect.top;
+		win->w = rect.right - rect.left;
+		win->h = rect.bottom - rect.top;
+
+		GetClientRect(hwnd, &rect);
+		win->cw = rect.right - rect.left;
+		win->ch = rect.bottom - rect.top;
+
+		POINT point = { 0, 0 };
+		ClientToScreen(hwnd, &point);
+		win->cx = point.x;
+		win->cy = point.y;
+
 		return 1;
 	}
 
@@ -128,36 +141,45 @@ static LRESULT CALLBACK vl_window_proc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) 
 		return 0;
 	}
 	case WM_SIZE: {
-		UINT width = LOWORD(l);
-		UINT height = HIWORD(l);
 		if (win) {
-			win->w = (int)width;
-			win->h = (int)height;
+			RECT rect;
+			GetWindowRect(hwnd, &rect);
+			win->base.w = rect.right - rect.left;
+			win->base.h = rect.bottom - rect.top;
+
+			GetClientRect(hwnd, &rect);
+			win->base.cw = rect.right - rect.left;
+			win->base.ch = rect.bottom - rect.top;
 		}
 		if (win && win->resize_function) {
-			win->resize_function(win, win->w, win->h);
+			win->resize_function((VlWindow) win);
 		}
 		return 0;
 	}
 	case WM_MOVE: {
-		UINT x = LOWORD(l);
-		UINT y = HIWORD(l);
 		if (win) {
-			win->x = (int)x;
-			win->y = (int)y;
+			RECT rect;
+			GetWindowRect(hwnd, &rect);
+			win->base.x = rect.left;
+			win->base.y = rect.top;
+
+			POINT point = { 0, 0 };
+			ClientToScreen(hwnd, &point);
+			win->base.cx = point.x;
+			win->base.cy = point.y;
 		}
 		if (win && win->move_function) {
-			win->move_function(win, win->x, win->y);
+			win->move_function((VlWindow) win);
 		}
 		return 0;
 	}
 	case WM_PAINT: {
 		if (win->paint_function) {
-			win->paint_function(win);
+			win->paint_function((VlWindow) win);
 			ValidateRect(hwnd, NULL);
 		}
 		return 0;
 	}
 	}
-	return DefWindowProc(hwnd, msg, w, l);
+	return DefWindowProc(hwnd, msg, wp, lp);
 }

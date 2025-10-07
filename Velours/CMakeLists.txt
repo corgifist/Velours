@@ -24,10 +24,15 @@ if(BUILD_SHARED_LIBS)
 else()
 	add_library(Velours STATIC ${Velours_Sources} ${Velours_Headers})
 endif()
-target_compile_definitions(Velours PRIVATE PROPERTIES VELOURS_EXPORT)
+
+target_compile_definitions(Velours PRIVATE VELOURS_EXPORT)
+
+if(ENABLE_SOFTWARE_BACKEND)
+	target_compile_definitions(Velours PRIVATE VL_SOFTWARE_BACKEND_ENABLED)
+endif()
 
 if(BUILD_SHARED_LIBS)
-	target_compile_definitions(Velours PRIVATE PROPERTIES VELOURS_SHARED)
+	target_compile_definitions(Velours PRIVATE VELOURS_SHARED)
 endif()
 
 if(WIN32)

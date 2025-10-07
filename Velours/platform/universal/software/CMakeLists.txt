@@ -1,14 +1,11 @@
-if (ENABLE_SOFTWARE_BACKEND)
-	add_subdirectory(software)
-endif()
-
 set(Velours_Sources
 	${Velours_Sources}
+	platform/universal/software/graphics.c
 	PARENT_SCOPE
 )
 
 set(Velours_Headers
 	${Velours_Headers}
-	platform/universal/main.h
+	platform/universal/software/graphics.h
 	PARENT_SCOPE
 )

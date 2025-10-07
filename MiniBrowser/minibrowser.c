@@ -73,7 +73,7 @@ void ht_test(void) {
     VL_HT_NEW(ht, int, int);
     printf("after ht creation memory usage: %zu\n", vl_memory_get_usage());
 
-    srand((unsigned int) time(NULL));
+    srand((unsigned int)time(NULL));
 
     for (int i = 0; i < 1000; i++) {
         int key = i - 500;
@@ -89,7 +89,7 @@ void ht_test(void) {
     VL_HT(int, int) iterator_pos = ht;
     int sum = 0;
     while (vl_ht_iterate(ht, &iterator_pos, &entry)) {
-        sum += *((int*) entry.value);
+        sum += *((int*)entry.value);
     }
     printf("sum: %i\n", sum);
 
@@ -122,9 +122,9 @@ void ht_test(void) {
 }
 
 void file_test(void) {
-    VlFile *file = vl_file_new("30mb.xml", "r");
+    VlFile* file = vl_file_new("30mb.xml", "r");
 
-    VlXML *xml = vl_xml_new_from_file(file, NULL);
+    VlXML* xml = vl_xml_new_from_file(file, NULL);
     if (!xml) {
         printf("failed to parse 30mb.xml\n");
         return;
@@ -139,7 +139,7 @@ void xml_test(void) {
     printf("initial memory usage: %zu\n", vl_memory_get_usage());
 
     char error[512];
-    VlXML *test = vl_xml_new(test_xml, error);
+    VlXML* test = vl_xml_new(test_xml, error);
     printf("memory usage after parsing: %zu\n", vl_memory_get_usage());
     if (!test) {
         printf("end_result: %p;\nfailed to open test_xml!\n%s\n", test, error);
@@ -154,41 +154,35 @@ void xml_test(void) {
     vl_memory_dump();
 }
 
-static VlGraphics *graphics = NULL;
-static VlGraphicsBrush yellow_brush;
-
-void paint(VlWindow window) {
-    VL_UNUSED(window);
-    vl_graphics_begin(graphics);
-    vl_graphics_clear(graphics, VL_RGBA(0.1, 0.1, 0.1, 1));
-    vl_graphics_fill_rectangle(graphics, &yellow_brush, VL_RECT(100, 100, 400, 400));
-    if (vl_graphics_end(graphics) == VL_GRAPHICS_SHOULD_TERMINATE) {
-        vl_graphics_brush_free(&yellow_brush);
-        vl_graphics_free(graphics);
-        graphics = NULL;
-    }
-}
-
-void resize(VlWindow window, int w, int h) {
-    VL_UNUSED(window);
-    vl_graphics_resize(graphics, w, h);
-}
-
+static VlWindow s_window;
+static VlGraphics s_graphics;
 void window_test(void) {
-    vl_graphics_initialize();
-    printf("testing custom console!\n");
-    VlWindow *win = vl_window_new("Velours windows are working!", 640, 480, 200, 200);
-    graphics = vl_graphics_new(win);
-    vl_graphics_brush_new_solid(graphics, &yellow_brush, VL_RGBA(1, 1, 0, 1));
-    vl_window_set_paint_function(win, paint);
-    vl_window_set_resize_function(win, resize);
-    vl_window_set_visible(win, 1);
-    vl_window_message_loop(win);
-    vl_graphics_brush_free(&yellow_brush);
-    vl_graphics_free(graphics);
-    vl_window_free(win);
+    s_window = vl_window_new("Velours Software Renderer Backend", 0, 0, 640, 480);
+    if (!s_window) {
+        printf("failed to create window\n");
+        return;
+    }
 
-    vl_graphics_terminate();
+    if (vl_graphics_initialize(VL_GRAPHICS_BACKEND_SOFTWARE)) {
+        printf("failed to initialize graphics!\n");
+        return;
+    }
+
+    printf("x, y, w, h: %i, %i, %i, %i\n", s_window->x, s_window->y, s_window->w, s_window->h);
+    printf("cx, cy, cw, ch: %i, %i, %i, %i\n", s_window->cx, s_window->cy, s_window->cw, s_window->ch);
+    s_graphics = vl_graphics_new(s_window);
+    if (!s_graphics) {
+        printf("failed to create graphics!\n");
+        return;
+    }
+
+    vl_window_set_visible(s_window, 1);
+    vl_window_message_loop(s_window);
+
+    if (vl_graphics_terminate()) {
+        printf("failed to terminate graphics!\n");
+        return;
+    }
 }
 
 void utf_test(void) {
@@ -235,9 +229,11 @@ int main(int argc, char **argv) {
 
 	// da_test();
     // ht_test();
-    file_test();
+    // file_test();
     // xml_test();
     // stream_test();
     // utf_test();
+    window_test();
+    vl_memory_dump();
 	return VL_SUCCESS;
 }
