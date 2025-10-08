@@ -18,11 +18,18 @@ typedef enum {
 	VL_GRAPHICS_BACKEND_COUNT = 2
 } VlGraphicsBackend;
 
+typedef enum {
+	VL_GRAPHICS_ANTIALIASING_OFF = 0,
+	VL_GRAPHICS_ANTIALIASING_ON = 1,
+	VL_GRAPHICS_ANTIALIASING_COUNT = 2
+} VlGraphicsAntialiasingMode;
+
 // VlGraphics is a pointer to platform-specific graphic infrastructure
 // e.g. VlWinGraphics on windows
 struct VlGraphics {
 	VlWindow window;
 	VlGraphicsBackend type;
+	VlGraphicsAntialiasingMode antialias;
 };
 
 typedef struct VlGraphics* VlGraphics;
@@ -50,8 +57,10 @@ typedef VlResult (*VlGraphicsInitializeFunction)(void);
 typedef VlGraphics (*VlGraphicsNewFunction)(VlWindow);
 
 typedef VlResult (*VlGraphicsPresentationBeginFunction)(VlGraphics);
+typedef VlResult(*VlGraphicsSetAntialiasingModeFunction)(VlGraphics, VlGraphicsAntialiasingMode);
 typedef VlResult (*VlGraphicsBeginFunction)(VlGraphics);
 typedef VlResult (*VlGraphicsClearFunction)(VlGraphics, VlRGBA);
+typedef VlResult(*VlGraphicsLineFunction)(VlGraphics, VlVec2, VlVec2, VlRGBA, int);
 typedef VlResult (*VlGraphicsEndFunction)(VlGraphics);
 typedef VlResult (*VlGraphicsPresentationEndFunction)(VlGraphics);
 
@@ -78,6 +87,8 @@ VL_API VlResult vl_graphics_resize(VlGraphics graphics, int w, int h);
 
 VL_API VlResult vl_graphics_presentation_begin(VlGraphics graphics);
 
+VL_API VlResult vl_graphics_set_antialiasing_mode(VlGraphics graphics, VlGraphicsAntialiasingMode mode);
+
 // VlResult vl_graphics_begin(VlGraphics graphics)
 // starts drawing on specified VlGraphics
 // all rendering functions should be enclosed in vl_graphics_begin / vl_graphics_end function calls
@@ -89,6 +100,7 @@ VL_API VlResult vl_graphics_presentation_begin(VlGraphics graphics);
 //     vl_graphics_end(some_graphics);
 VL_API VlResult vl_graphics_begin(VlGraphics graphics);
 VL_API VlResult vl_graphics_clear(VlGraphics graphics, VlRGBA rgba);
+VL_API VlResult vl_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness);
 VL_API VlResult vl_graphics_draw_rectangle(VlGraphics graphics, VlGraphicsBrush *brush, VlRect rect, float stroke_width);
 VL_API VlResult vl_graphics_fill_rectangle(VlGraphics graphics, VlGraphicsBrush* brush, VlRect rect);
 

@@ -10,7 +10,7 @@
 #include "platform/window.h"
 
 typedef struct {
-	u8 *data;
+	unsigned char *data;
 	int w, h;
 	char pixel_size;
 	char channels, depth;
@@ -30,8 +30,11 @@ typedef struct {
 
 VlResult vl_software_graphics_initialize(void);
 
+VlResult vl_software_graphics_set_antialiasing_mode(VlGraphics graphics, VlGraphicsAntialiasingMode mode);
+
 VlResult vl_software_graphics_begin(VlGraphics graphics);
 VlResult vl_software_graphics_clear(VlGraphics graphics, VlRGBA rgba);
+VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness);
 VlResult vl_software_graphics_end(VlGraphics graphics);
 
 VlResult vl_software_graphics_terminate(void);

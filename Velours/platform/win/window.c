@@ -93,6 +93,23 @@ VL_API void vl_window_set_move_function(VlWindow window, VlWindowMoveFunction fn
 	((VlWinWindow*) window)->move_function = fn;
 }
 
+VL_API void vl_window_invalidate_region(VlWindow window, int x1, int y1, int x2, int y2) {
+	if (!window) return;
+	VlWinWindow* win = (VlWinWindow*)window;
+	if (x1 == 0 && y1 == 0 && x2 == 0 && y2 == 0) {
+		x1 = 0;
+		y1 = 0;
+		x2 = win->base.cw;
+		y2 = win->base.ch;
+	}
+	RECT r;
+	r.left = x1;
+	r.top = y1;
+	r.right = x2;
+	r.bottom = y2;
+	InvalidateRect(win->hwnd, &r, FALSE);
+}
+
 VL_API void vl_window_message_loop(VlWindow window) {
 	if (!window) return;
 	VlWinWindow* win = (VlWinWindow*) window;
@@ -176,7 +193,6 @@ static LRESULT CALLBACK vl_window_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
 	case WM_PAINT: {
 		if (win->paint_function) {
 			win->paint_function((VlWindow) win);
-			ValidateRect(hwnd, NULL);
 		}
 		return 0;
 	}

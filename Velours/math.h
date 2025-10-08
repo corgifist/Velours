@@ -4,6 +4,8 @@
 #ifndef VELOURS_MATH_H
 #define VELOURS_MATH_H
 
+#include <math.h>
+
 #define VL_MIN(A, B) (((A) < (B)) ? (A) : (B))
 #define VL_MAX(A, B) (((A) < (B)) ? (B) : (A))
 
@@ -13,10 +15,20 @@ typedef struct {
 } VlRect;
 
 typedef struct {
+	float x, y;
+} VlVec2;
+
+typedef struct {
 	float r, g, b, a;
 } VlRGBA;
 
+double sqrt(double x);
+
 #define VL_RECT(X1, Y1, X2, Y2) ((VlRect) {.x1 = (float) (X1), .y1 = (float) (Y1), .x2 = (float) (X2), .y2 = (float) (Y2)})
+#define VL_VEC2(X, Y) ((VlVec2) {.x = (float) (X), .y = (float) (Y)})
 #define VL_RGBA(R, G, B, A) ((VlRGBA) {.r = (float) (R), .g = (float) (G), .b = (float) (B), .a = (float) (A)})
+
+#define VL_ABS(X) (((X) < 0) ? -(X) : (X))
+#define VL_CLAMP(X, A, B) VL_MAX(A, VL_MIN(X, B))
 
 #endif // VELOURS_MATH_H

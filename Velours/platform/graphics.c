@@ -16,9 +16,11 @@
 static VlGraphicsInitializeFunction graphics_initialize = NULL;
 static VlGraphicsNewFunction graphics_new = NULL;
 
+static VlGraphicsSetAntialiasingModeFunction graphics_set_antialiasing_mode = NULL;
 static VlGraphicsPresentationBeginFunction graphics_presentation_begin = NULL;
 static VlGraphicsBeginFunction graphics_begin = NULL;
 static VlGraphicsClearFunction graphics_clear = NULL;
+static VlGraphicsLineFunction graphics_line = NULL;
 static VlGraphicsEndFunction graphics_end = NULL;
 static VlGraphicsPresentationEndFunction graphics_presentation_end = NULL;
 
@@ -34,8 +36,10 @@ static VlGraphicsTerminateFunction graphics_terminate = NULL;
 #define SET_GRAPHICS_POINTERS(B) \
 	do { \
 		graphics_initialize = GRPTR(B, initialize); \
+		graphics_set_antialiasing_mode = GRPTR(B, set_antialiasing_mode); \
 		graphics_begin = GRPTR(B, begin); \
 		graphics_clear = GRPTR(B, clear); \
+		graphics_line = GRPTR(B, line); \
 		graphics_end = GRPTR(B, end); \
 		graphics_terminate = GRPTR(B, terminate); \
 	} while (0)
@@ -69,6 +73,11 @@ VL_API VlGraphics vl_graphics_new(VlWindow window) {
 	return graphics_new(window);
 }
 
+VL_API VlResult vl_graphics_set_antialiasing_mode(VlGraphics graphics, VlGraphicsAntialiasingMode mode) {
+	if (!graphics_set_antialiasing_mode) return VL_ERROR;
+	return graphics_set_antialiasing_mode(graphics, mode);
+}
+
 VL_API VlResult vl_graphics_presentation_begin(VlGraphics graphics) {
 	if (!graphics_presentation_begin) return VL_ERROR;
 	return graphics_presentation_begin(graphics);
@@ -82,6 +91,11 @@ VL_API VlResult vl_graphics_begin(VlGraphics graphics) {
 VL_API VlResult vl_graphics_clear(VlGraphics window, VlRGBA rgba) {
 	if (!graphics_clear) return VL_ERROR;
 	return graphics_clear(window, rgba);
+}
+
+VL_API VlResult vl_graphics_line(VlGraphics window, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
+	if (!graphics_line) return VL_ERROR;
+	return graphics_line(window, p1, p2, brush, thickness);
 }
 
 VL_API VlResult vl_graphics_end(VlGraphics graphics) {

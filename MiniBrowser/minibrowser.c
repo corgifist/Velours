@@ -159,15 +159,19 @@ static VlGraphics s_graphics;
 
 void resize(VlWindow window) {
     vl_graphics_resize(s_graphics, window->cw, window->ch);
+    vl_window_invalidate_region(s_window, 0, 0, 0, 0);
 }
 
 void paint(VlWindow window) {
     VL_UNUSED(window);
     vl_graphics_presentation_begin(s_graphics);
+
+    vl_graphics_set_antialiasing_mode(s_graphics, VL_GRAPHICS_ANTIALIASING_ON);
     vl_graphics_begin(s_graphics);
 
-    vl_graphics_clear(s_graphics, VL_RGBA(1, 0, 1, 1));
-    
+    vl_graphics_clear(s_graphics, VL_RGBA(0.1, 0.1, 0.1, 1));
+    vl_graphics_line(s_graphics, VL_VEC2(0, 0), VL_VEC2(window->cw, window->ch), VL_RGBA(1, 1, 1, 1), 5);
+
     vl_graphics_end(s_graphics);
     vl_graphics_presentation_end(s_graphics);
 }
