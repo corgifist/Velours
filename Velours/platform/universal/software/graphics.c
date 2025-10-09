@@ -139,15 +139,15 @@ static void draw_soft_brush(VlSoftwarePixelBuffer* front, int cx, int cy, int ra
 	}
 }
 
-VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
+static VlResult vl_software_graphics_bresenham_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
 	VL_UNUSED(thickness);
 	if (!graphics) return VL_ERROR;
 	VlSoftwareGraphics* software = (VlSoftwareGraphics*)graphics;
 	if (!software->front) return VL_ERROR;
-	int x1 = (int) p2.x;
-	int x0 = (int) p1.x;
-	int y1 = (int) p2.y;
-	int y0 = (int) p1.y;
+	int x1 = (int)p2.x;
+	int x0 = (int)p1.x;
+	int y1 = (int)p2.y;
+	int y0 = (int)p1.y;
 	if (!(x0 >= software->x1 && x0 <= software->x2) && !(y0 >= software->y1 && y0 <= software->y2) &&
 		!(x1 >= software->x1 && x1 <= software->x2) && !(y1 >= software->y1 && y1 <= software->y2)) return VL_SUCCESS;
 	int radius = thickness / 2;
@@ -172,46 +172,161 @@ VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, Vl
 	int y = y0;
 
 	unsigned char cl[4];
-	cl[0] = (unsigned char) (brush.r * 255);
-	cl[1] = (unsigned char) (brush.g * 255);
-	cl[2] = (unsigned char) (brush.b * 255);
-	cl[3] = (unsigned char) (brush.a * 255);
+	cl[0] = (unsigned char)(brush.r * 255);
+	cl[1] = (unsigned char)(brush.g * 255);
+	cl[2] = (unsigned char)(brush.b * 255);
+	cl[3] = (unsigned char)(brush.a * 255);
 
 	if (radius == 0) {
-		for (int x = x0; x <= x1; ++x) {
-			if (steep)
+		if (steep) {
+			for (int x = x0; x <= x1; ++x) {
 				SET_PIXEL(software->front, y, x, brush);
-			else
+
+				err -= dy;
+				if (err < 0) {
+					y += ystep;
+					err += dx;
+				}
+			}
+		} else {
+			for (int x = x0; x <= x1; ++x) {
 				SET_PIXEL(software->front, x, y, brush);
 
-			err -= dy;
-			if (err < 0) {
-				y += ystep;
-				err += dx;
+				err -= dy;
+				if (err < 0) {
+					y += ystep;
+					err += dx;
+				}
 			}
 		}
 	} else {
-		for (int x = x0; x <= x1; ++x) {
-			if (graphics->antialias == VL_GRAPHICS_ANTIALIASING_ON) {
-				if (steep)
-					draw_soft_brush(software->front, y, x, radius, cl, 1.5);
-				else
-					draw_soft_brush(software->front, x, y, radius, cl, 1.5);
-			} else {
-				if (steep)
-					draw_brush(software->front, y, x, radius, cl);
-				else
-					draw_brush(software->front, x, y, radius, cl);
-			}
+		if (steep) {
+			for (int x = x0; x <= x1; ++x) {
+				draw_brush(software->front, y, x, radius, cl);
 
-			err -= dy;
-			if (err < 0) {
-				y += ystep;
-				err += dx;
+				err -= dy;
+				if (err < 0) {
+					y += ystep;
+					err += dx;
+				}
+			}
+		} else {
+			for (int x = x0; x <= x1; ++x) {
+				draw_brush(software->front, x, y, radius, cl);
+
+				err -= dy;
+				if (err < 0) {
+					y += ystep;
+					err += dx;
+				}
 			}
 		}
 	}
 	return VL_SUCCESS;
+}
+
+static VlResult vl_software_graphics_wu_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
+	VL_UNUSED(thickness);
+	if (!graphics) return VL_ERROR;
+	VlSoftwareGraphics* software = (VlSoftwareGraphics*)graphics;
+	if (!software->front) return VL_ERROR;
+	int x1 = (int)p2.x;
+	int x0 = (int)p1.x;
+	int y1 = (int)p2.y;
+	int y0 = (int)p1.y;
+	if (!(x0 >= software->x1 && x0 <= software->x2) && !(y0 >= software->y1 && y0 <= software->y2) &&
+		!(x1 >= software->x1 && x1 <= software->x2) && !(y1 >= software->y1 && y1 <= software->y2)) return VL_SUCCESS;
+	int radius = thickness / 2;          // floor division
+
+	char steep = abs(y1 - y0) > abs(x1 - x0);
+	if (steep) {
+		/* swap x ↔ y */
+		int tmp;
+		tmp = x0; x0 = y0; y0 = tmp;
+		tmp = x1; x1 = y1; y1 = tmp;
+	}
+	if (x0 > x1) {
+		/* swap start ↔ end */
+		int tmp;
+		tmp = x0; x0 = x1; x1 = tmp;
+		tmp = y0; y0 = y1; y1 = tmp;
+	}
+
+	float dx = (float)(x1 - x0);
+	float dy = (float)(y1 - y0);
+	float gradient = dx == 0.0f ? 1.0f : dy / dx;
+
+	/* ---- first endpoint ---- */
+	int xend = x0;
+	float yend = y0 + gradient * (xend - x0);
+	int xpxl1 = xend;
+	int ypxl1 = (int)floorf(yend);
+	float xgap = 1.0f - fmodf((float)x0 + 0.5f, 1.0f);
+	float alpha1 = (1.0f - fmodf(yend, 1.0f)) * xgap;
+	float alpha2 = fmodf(yend, 1.0f) * xgap;
+
+	unsigned char cl[4];
+	cl[0] = (unsigned char)(brush.r * 255);
+	cl[1] = (unsigned char)(brush.g * 255);
+	cl[2] = (unsigned char)(brush.b * 255);
+	cl[3] = (unsigned char)(brush.a * 255);
+
+	if (steep) {
+		draw_soft_brush(software->front, ypxl1, xpxl1, radius, cl, alpha1);
+		draw_soft_brush(software->front, ypxl1 + 1, xpxl1, radius, cl, alpha2);
+	}
+	else {
+		draw_soft_brush(software->front, xpxl1, ypxl1, radius, cl, alpha1);
+		draw_soft_brush(software->front, xpxl1, ypxl1 + 1, radius, cl, alpha2);
+	}
+
+	double intery = yend + gradient;   // first y-intersection for the main loop
+
+	/* ---- second endpoint ---- */
+	xend = x1;
+	yend = y1 + gradient * (xend - x1);
+	int xpxl2 = xend;
+	int ypxl2 = (int)floorf(yend);
+	xgap = fmodf((float)x1 + 0.5f, 1.0f);
+	alpha1 = (1.0f - fmodf(yend, 1.0f)) * xgap;
+	alpha2 = fmodf(yend, 1.0f) * xgap;
+
+	if (steep) {
+		draw_soft_brush(software->front, ypxl2, xpxl2, radius, cl, alpha1);
+		draw_soft_brush(software->front, ypxl2 + 1, xpxl2, radius, cl, alpha2);
+	}
+	else {
+		draw_soft_brush(software->front, xpxl2, ypxl2, radius, cl, alpha1);
+		draw_soft_brush(software->front, xpxl2, ypxl2 + 1, radius, cl, alpha2);
+	}
+
+	/* ---- main loop ---- */
+	if (steep) {
+		for (int x = xpxl1 + 1; x < xpxl2; ++x) {
+			int y = (int)floor(intery);
+			double f = intery - y;               /* fractional part */
+			draw_soft_brush(software->front, y, x, radius, cl, 1.0f - f);
+			draw_soft_brush(software->front, y + 1, x, radius, cl, f);
+			intery += gradient;
+		}
+	} else {
+		for (int x = xpxl1 + 1; x < xpxl2; ++x) {
+			int y = (int)floor(intery);
+			double f = intery - y;
+			draw_soft_brush(software->front, x, y, radius, cl, 1.0f - f);
+			draw_soft_brush(software->front,x, y + 1, radius, cl, f);
+			intery += gradient;
+		}
+	}
+
+	return VL_SUCCESS;
+}
+
+VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
+	return
+		graphics->antialias == VL_GRAPHICS_ANTIALIASING_ON
+		? vl_software_graphics_wu_line(graphics, p1, p2, brush, thickness)
+		: vl_software_graphics_bresenham_line(graphics, p1, p2, brush, thickness);
 }
 
 VlResult vl_software_graphics_end(VlGraphics graphics) {

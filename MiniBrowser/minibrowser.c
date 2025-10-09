@@ -171,6 +171,7 @@ void paint(VlWindow window) {
 
     vl_graphics_clear(s_graphics, VL_RGBA(0.1, 0.1, 0.1, 1));
     vl_graphics_line(s_graphics, VL_VEC2(0, 0), VL_VEC2(window->cw, window->ch), VL_RGBA(1, 1, 1, 1), 5);
+    vl_graphics_line(s_graphics, VL_VEC2(window->cw, 0), VL_VEC2(0, window->ch), VL_RGBA(1, 1, 1, 1), 5);
 
     vl_graphics_end(s_graphics);
     vl_graphics_presentation_end(s_graphics);
