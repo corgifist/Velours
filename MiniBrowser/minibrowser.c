@@ -8,6 +8,7 @@
 #include "platform/window.h"
 #include "platform/graphics.h"
 #include "platform/main.h"
+#include "platform/timer.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -157,6 +158,8 @@ void xml_test(void) {
 static VlWindow s_window;
 static VlGraphics s_graphics;
 
+#define LINES 50
+
 void resize(VlWindow window) {
     vl_graphics_resize(s_graphics, window->cw, window->ch);
     vl_window_invalidate_region(s_window, 0, 0, 0, 0);
@@ -170,8 +173,12 @@ void paint(VlWindow window) {
     vl_graphics_begin(s_graphics);
 
     vl_graphics_clear(s_graphics, VL_RGBA(0.1, 0.1, 0.1, 1));
-    vl_graphics_line(s_graphics, VL_VEC2(0, 0), VL_VEC2(window->cw, window->ch), VL_RGBA(1, 1, 1, 1), 5);
-    vl_graphics_line(s_graphics, VL_VEC2(window->cw, 0), VL_VEC2(0, window->ch), VL_RGBA(1, 1, 1, 1), 5);
+    
+    int radius = window->ch / 2;
+
+    for (int i = 0; i < LINES; i++) {
+        vl_graphics_line(s_graphics, VL_VEC2(window->cw / 2, window->ch / 2), VL_VEC2(window->cw / 2 + radius * sin((float) i / LINES * VL_PI * 2), window->ch / 2 + radius * cos((float) i / LINES * VL_PI * 2)), VL_RGBA(1, 1, 1, 1), 1);
+    }
 
     vl_graphics_end(s_graphics);
     vl_graphics_presentation_end(s_graphics);
@@ -244,6 +251,21 @@ void stream_test(void) {
     vl_memory_dump();
 }
 
+int frame = 0;
+
+void tcallback(VlTimer timer) {
+    printf("callback fired: %s, %f\n", timer->name, ((float) (frame++) / 60.0f));
+    vl_timer_reset(timer);
+}
+
+void timer_test(void) {
+    VlTimer timer = vl_timer_new("asdhweurh", 16, VL_TIMER_PRECISE, tcallback);
+    if (!timer) {
+        printf("failed to create timer, %i\n", (int) GetLastError());
+        return;
+    }
+    vl_timer_wait(timer, 0);
+}
 
 int main(int argc, char **argv) {
     for (int i = 0; i < argc; i++) {
@@ -259,7 +281,8 @@ int main(int argc, char **argv) {
     // xml_test();
     // stream_test();
     // utf_test();
-    window_test();
+    // window_test();
+    timer_test();
     vl_memory_dump();
 	return VL_SUCCESS;
 }

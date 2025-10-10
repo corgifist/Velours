@@ -5,6 +5,7 @@ set(Velours_Sources
 	memory.c
 	ht.c
 	file.c
+	math.c
 )
 
 set(Velours_Headers
