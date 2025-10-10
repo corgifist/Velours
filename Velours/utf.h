@@ -208,7 +208,8 @@ static VL_DA(u16) utf8_to_utf16(const u8* s) {
 		if (len >= 1) VL_DA_APPEND(result, enc[0]);
 		if (len >= 2) VL_DA_APPEND(result, enc[1]);
 	}
-	VL_DA_RESIZE(result, VL_DA_HEADER(result)->count + 1);
+	size_t new_count = VL_DA_HEADER(result)->count + 1;
+	VL_DA_RESIZE(result, new_count);
 	VL_DA_HEADER(result)->count++;
 	result[VL_DA_HEADER(result)->count - 1] = '\0';
 	return result;

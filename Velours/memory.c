@@ -27,8 +27,9 @@ static struct VlAllocInfo *s_last = &s_root;
 
 VL_API void *vl_malloc(const char *file, size_t line, size_t size) {
 	if (!size) return NULL;
-	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_malloc(%zu)\n", file, line, size);
+	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_malloc(%zu)", file, line, size);
 	struct VlAllocInfo* res = malloc(size + sizeof(struct VlAllocInfo));
+	printf(", %p\n", res);
 	if (res) {
 		s_allocated += size;
 		s_allocations++;
@@ -44,17 +45,18 @@ VL_API void *vl_malloc(const char *file, size_t line, size_t size) {
 }
 
 VL_API void *vl_realloc(const char *file, size_t line, void *mem, size_t new_size) {
-	if (!mem) return NULL;
+	if (!mem) return vl_malloc(file, line, new_size);
 	struct VlAllocInfo *old_info = (struct VlAllocInfo*) ((char*) mem - sizeof(struct VlAllocInfo));
 	struct VlAllocInfo* prev = old_info->prev;
 	struct VlAllocInfo* next = old_info->next;
 	size_t old_size = old_info->size;
-	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_realloc(%p, %zu), old size: %zu\n", file, line, mem, new_size, old_size);
+	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_realloc(%p, %zu), old size: %zu", file, line, mem, new_size, old_size);
 	if (!old_info->ptr && s_level >= VL_MEMORY_ONLY_ERRORS) {
-		printf("possible realloc of NULL pointer: %s(%zu)\n", file, line);
-		return NULL;
+		printf("\npossible realloc of NULL pointer: %s(%zu)\n", file, line);
+		exit(1);
 	}
 	struct VlAllocInfo* res = realloc(old_info, new_size + sizeof(struct VlAllocInfo));
+	printf(", %p\n", res);
 	if (res) {
 		s_allocated += new_size - old_size;
 
@@ -62,10 +64,11 @@ VL_API void *vl_realloc(const char *file, size_t line, void *mem, size_t new_siz
 		res->prev = prev;
 		res->next = next;
 
-		res->prev->next = res;
+		if (res->prev) res->prev->next = res;
 		if (res->next) {
 			res->next->prev = res;
 		} else {
+			if (s_last->prev) s_last->prev->next = res;
 			s_last = res;
 		}
 	}
@@ -77,13 +80,17 @@ VL_API void vl_free(const char *file, size_t line, void *mem) {
 	size_t size = ((struct VlAllocInfo*) ((char*) mem - sizeof(struct VlAllocInfo)))->size;
 	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_free(%p), alloc size: %zu\n", file, line, mem, size);
 	struct VlAllocInfo *info = (struct VlAllocInfo*) ((char*) mem - sizeof(struct VlAllocInfo));
-	if (!info->ptr && s_level >= VL_MEMORY_ONLY_ERRORS) {
+	if ((!info->ptr || !info->prev) && s_level >= VL_MEMORY_ONLY_ERRORS) {
 		printf("possible double free: %s(%zu)\n", file, line);
+		exit(1);
 		return;
 	}
-	info->prev->next = info->next;
+	if (info->prev) info->prev->next = info->next;
 	if (info->next) info->next->prev = info->prev;
-	else s_last = info->prev;
+	else {
+		s_last->next = info->prev;
+		s_last = info->prev;
+	}
 	info->ptr = NULL;
 	free(info);
 	s_allocated -= size;

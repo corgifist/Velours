@@ -122,6 +122,8 @@ VL_API void vl_window_message_loop(VlWindow window) {
 
 VL_API VlResult vl_window_free(VlWindow window) {
 	if (!window) return VL_ERROR;
+	ShowWindow(((VlWinWindow*) window)->hwnd, SW_HIDE);
+	DestroyWindow(((VlWinWindow*) window)->hwnd);
 	VL_FREE(window);
 	return VL_SUCCESS;
 }

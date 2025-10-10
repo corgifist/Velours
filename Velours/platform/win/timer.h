@@ -5,10 +5,12 @@
 
 typedef struct {
 	struct VlTimer base;
-	VL_DA(u16) name16;
 	HANDLE h;
 	HANDLE t;
+	i64 internal_milliseconds;
 	char reset;
+	char should_fire_now;
+	char running;
 } VlWinTimer;
 
 #endif // VELOURS_PLATFORM_WIN_TIMER_H

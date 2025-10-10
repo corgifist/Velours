@@ -165,8 +165,11 @@ void resize(VlWindow window) {
     vl_window_invalidate_region(s_window, 0, 0, 0, 0);
 }
 
+float angle_offset = 0;
+
 void paint(VlWindow window) {
     VL_UNUSED(window);
+    // u64 start = vl_timer_get_milliseconds();
     vl_graphics_presentation_begin(s_graphics);
 
     vl_graphics_set_antialiasing_mode(s_graphics, VL_GRAPHICS_ANTIALIASING_ON);
@@ -177,11 +180,21 @@ void paint(VlWindow window) {
     int radius = window->ch / 2;
 
     for (int i = 0; i < LINES; i++) {
-        vl_graphics_line(s_graphics, VL_VEC2(window->cw / 2, window->ch / 2), VL_VEC2(window->cw / 2 + radius * sin((float) i / LINES * VL_PI * 2), window->ch / 2 + radius * cos((float) i / LINES * VL_PI * 2)), VL_RGBA(1, 1, 1, 1), 1);
+        vl_graphics_line(s_graphics, VL_VEC2(window->cw / 2, window->ch / 2), VL_VEC2(window->cw / 2 + radius * sin((float) i / LINES * VL_PI * 2 + angle_offset), window->ch / 2 + radius * cos((float) i / LINES * VL_PI * 2 + angle_offset)), VL_RGBA(1, 1, 1, 1), 1);
     }
 
     vl_graphics_end(s_graphics);
     vl_graphics_presentation_end(s_graphics);
+    // u64 end = vl_timer_get_milliseconds();
+    // printf("%zu - %zu = %zu ms\n", end, start, end - start);
+}
+
+#define DESIRED_FPS 120
+
+void draw_timer_callback(VlTimer timer) {
+    angle_offset += 3.14f / (float)DESIRED_FPS / 2;
+    vl_window_invalidate_region(s_window, 0, 0, 0, 0);
+    vl_timer_reset(timer);
 }
 
 void window_test(void) {
@@ -207,8 +220,16 @@ void window_test(void) {
     vl_window_set_paint_function(s_window, paint);
     vl_window_set_resize_function(s_window, resize);
     vl_window_set_visible(s_window, 1);
+
+    VlTimer draw_timer = vl_timer_new("draw timer", (int)(1000.0f / (float)DESIRED_FPS), VL_TIMER_PRECISE & VL_TIMER_HIGH_PRIORITY, draw_timer_callback);
+    if (!draw_timer) {
+        printf("failed to create timer\n");
+        return;
+    }
+
     vl_window_message_loop(s_window);
 
+    vl_timer_free(draw_timer);
     vl_graphics_free(s_graphics);
     vl_window_free(s_window);
 
@@ -251,29 +272,13 @@ void stream_test(void) {
     vl_memory_dump();
 }
 
-int frame = 0;
-
-void tcallback(VlTimer timer) {
-    printf("callback fired: %s, %f\n", timer->name, ((float) (frame++) / 60.0f));
-    vl_timer_reset(timer);
-}
-
-void timer_test(void) {
-    VlTimer timer = vl_timer_new("asdhweurh", 16, VL_TIMER_PRECISE, tcallback);
-    if (!timer) {
-        printf("failed to create timer, %i\n", (int) GetLastError());
-        return;
-    }
-    vl_timer_wait(timer, 0);
-}
-
 int main(int argc, char **argv) {
     for (int i = 0; i < argc; i++) {
         printf("%s, ", argv[i]);
     }
     printf("\n");
 	SetConsoleOutputCP(CP_UTF8);
-    vl_memory_set_logging_level(VL_MEMORY_ONLY_ERRORS);
+    vl_memory_set_logging_level(VL_MEMORY_ALL);
 
 	// da_test();
     // ht_test();
@@ -281,8 +286,8 @@ int main(int argc, char **argv) {
     // xml_test();
     // stream_test();
     // utf_test();
-    // window_test();
-    timer_test();
+    window_test();
+    // timer_test();
     vl_memory_dump();
 	return VL_SUCCESS;
 }

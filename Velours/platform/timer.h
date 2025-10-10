@@ -9,7 +9,10 @@ typedef void (*VlTimerFunction)(struct VlTimer*);
 
 typedef enum {
 	VL_TIMER_NORMAL = 0,
-	VL_TIMER_PRECISE = 1
+	VL_TIMER_PRECISE = 1 << 0,
+	VL_TIMER_HIGH_PRIORITY = 1 << 1,
+	VL_TIMER_LOW_PRIORITY = 1 << 2,
+	VL_TIMER_CRITICAL_PRIORITY = 1 << 3
 } VlTimerType;
 
 struct VlTimer {
@@ -32,5 +35,8 @@ VL_API VlTimer vl_timer_new(u8 *name, u64 milliseconds, VlTimerType type, VlTime
 VL_API char vl_timer_wait(VlTimer timer, i64 milliseconds);
 VL_API VlResult vl_timer_reset(VlTimer timer);
 VL_API VlResult vl_timer_free(VlTimer timer);
+
+// returns number of milliseconds passed from the moment the program started
+VL_API u64 vl_timer_get_milliseconds(void);
 
 #endif // VELOURS_PLATFORM_TIMER_H

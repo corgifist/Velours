@@ -50,12 +50,12 @@ VlGraphics vl_software_graphics_win_new(VlWindow window) {
 }
 
 VlResult vl_software_graphics_win_resize(VlGraphics graphics, int w, int h) {
-	VlSoftwareGraphics* software = (VlSoftwareGraphics*) graphics;
-	VlSoftwarePixelBuffer* new_buffer = (VlSoftwarePixelBuffer*)vl_presentation_buffer_new(w, h, 4, 1);
-	memcpy(new_buffer->data, software->front->data, VL_MIN(
+	VlSoftwareGraphics *software = (VlSoftwareGraphics*) graphics;
+	VlSoftwarePixelBuffer *new_buffer = (VlSoftwarePixelBuffer*) vl_presentation_buffer_new(w, h, 4, 1);
+	/*memcpy(new_buffer->data, software->front->data, VL_MIN(
 		new_buffer->h * new_buffer->row, 
 		software->front->h * software->front->row
-	));
+	)); */
 	vl_presentation_buffer_free((VlWinPresentationBuffer*) software->front);
 	software->front = new_buffer;
 	software->w = w;
