@@ -16,15 +16,21 @@
 static VlGraphicsInitializeFunction graphics_initialize = NULL;
 static VlGraphicsNewFunction graphics_new = NULL;
 
-static VlGraphicsSetAntialiasingModeFunction graphics_set_antialiasing_mode = NULL;
+static VlGraphicsBrushSolidNewFunction graphics_brush_solid_new = NULL;
+
 static VlGraphicsPresentationBeginFunction graphics_presentation_begin = NULL;
+
+static VlGraphicsSetAntialiasingModeFunction graphics_set_antialiasing_mode = NULL;
 static VlGraphicsBeginFunction graphics_begin = NULL;
 static VlGraphicsClearFunction graphics_clear = NULL;
 static VlGraphicsLineFunction graphics_line = NULL;
 static VlGraphicsEndFunction graphics_end = NULL;
+
 static VlGraphicsPresentationEndFunction graphics_presentation_end = NULL;
 
 static VlGraphicsResizeFunction graphics_resize = NULL;
+
+static VlGraphicsBrushFreeFunction graphics_brush_free = NULL;
 
 static VlGraphicsFreeFunction graphics_free = NULL;
 static VlGraphicsTerminateFunction graphics_terminate = NULL;
@@ -36,10 +42,12 @@ static VlGraphicsTerminateFunction graphics_terminate = NULL;
 #define SET_GRAPHICS_POINTERS(B) \
 	do { \
 		graphics_initialize = GRPTR(B, initialize); \
+		graphics_brush_solid_new = GRPTR(B, brush_solid_new); \
 		graphics_set_antialiasing_mode = GRPTR(B, set_antialiasing_mode); \
 		graphics_begin = GRPTR(B, begin); \
 		graphics_clear = GRPTR(B, clear); \
 		graphics_line = GRPTR(B, line); \
+		graphics_brush_free = GRPTR(B, brush_free); \
 		graphics_end = GRPTR(B, end); \
 		graphics_terminate = GRPTR(B, terminate); \
 	} while (0)
@@ -73,6 +81,11 @@ VL_API VlGraphics vl_graphics_new(VlWindow window) {
 	return graphics_new(window);
 }
 
+VL_API VlGraphicsBrush vl_graphics_brush_solid_new(VlGraphics graphics, VlRGBA rgba) {
+	if (!graphics_brush_solid_new) return NULL;
+	return graphics_brush_solid_new(graphics, rgba);
+}
+
 VL_API VlResult vl_graphics_set_antialiasing_mode(VlGraphics graphics, VlGraphicsAntialiasingMode mode) {
 	if (!graphics_set_antialiasing_mode) return VL_ERROR;
 	return graphics_set_antialiasing_mode(graphics, mode);
@@ -93,8 +106,8 @@ VL_API VlResult vl_graphics_clear(VlGraphics window, VlRGBA rgba) {
 	return graphics_clear(window, rgba);
 }
 
-VL_API VlResult vl_graphics_line(VlGraphics window, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
-	if (!graphics_line) return VL_ERROR;
+VL_API VlResult vl_graphics_line(VlGraphics window, VlVec2 p1, VlVec2 p2, VlGraphicsBrush brush, int thickness) {
+	if (!graphics_line || !brush) return VL_ERROR;
 	return graphics_line(window, p1, p2, brush, thickness);
 }
 
@@ -111,6 +124,11 @@ VL_API VlResult vl_graphics_presentation_end(VlGraphics graphics) {
 VL_API VlResult vl_graphics_resize(VlGraphics graphics, int w, int h) {
 	if (!graphics_resize) return VL_ERROR;
 	return graphics_resize(graphics, w, h);
+}
+
+VL_API VlResult vl_graphics_brush_free(VlGraphicsBrush brush) {
+	if (!graphics_brush_free) return VL_ERROR;
+	return graphics_brush_free(brush);
 }
 
 VL_API VlResult vl_graphics_free(VlGraphics graphics) {

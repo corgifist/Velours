@@ -36,6 +36,31 @@ VlResult vl_software_graphics_set_antialiasing_mode(VlGraphics graphics, VlGraph
 	return VL_SUCCESS;
 }
 
+static VlRGBA vl_software_graphics_brush_sample_solid(VlGraphicsBrush brush, float x, float y) {
+	VL_UNUSED(x);
+	VL_UNUSED(y);
+	return ((VlSoftwareBrushSolid*) brush)->color;
+}
+
+VlGraphicsBrush vl_software_graphics_brush_solid_new(VlGraphics graphics, VlRGBA rgba) {
+	VlSoftwareBrushSolid *brush = VL_MALLOC(sizeof(VlSoftwareBrushSolid));
+	if (!brush) return NULL;
+
+	brush->base.base.type = VL_GRAPHICS_BRUSH_SOLID;
+	brush->base.base.owner = graphics;
+	brush->base.sample = vl_software_graphics_brush_sample_solid;
+	brush->color = rgba;
+
+	return (VlGraphicsBrush) brush;
+}
+
+VlResult vl_software_graphics_brush_free(VlGraphicsBrush brush) {
+	if (!brush) return VL_ERROR;
+
+	VL_FREE(brush);
+	return VL_SUCCESS;
+}
+
 VlResult vl_software_graphics_begin(VlGraphics graphics) {
 	VL_UNUSED(graphics);
 
@@ -58,7 +83,7 @@ VlResult vl_software_graphics_clear(VlGraphics graphics, VlRGBA color) {
 	if (!graphics) return VL_ERROR;
 	VlSoftwareGraphics *software = (VlSoftwareGraphics*) graphics;
 	if (!software->front) return VL_ERROR;
-	for (int y = software->y1; y < software->y2; y++) {
+	/* for (int y = software->y1; y < software->y2; y++) {
 		for (int x = software->x1; x < software->x2; x++) {
 			size_t __pixel_index = ((y) * software->front->row) + (x) * software->front->pixel_size;
 			software->front->data[__pixel_index] = (u8)(color.r * 255);
@@ -66,68 +91,67 @@ VlResult vl_software_graphics_clear(VlGraphics graphics, VlRGBA color) {
 			if (software->front->channels >= 3) software->front->data[__pixel_index + 2] = (u8) (color.b * 255);
 			if (software->front->channels >= 4) software->front->data[__pixel_index + 3] = (u8) (color.a * 255);
 		}
-	}
+	} */
+	union {
+		u32 rgba;
+		struct {
+			unsigned char r, g, b, a;
+		} split;
+	} compound = { 0 };
+	compound.split.r = (unsigned char) (color.r * 255);
+	compound.split.g = (unsigned char) (color.g * 255);
+	compound.split.b = (unsigned char) (color.b * 255);
+	compound.split.a = (unsigned char) (color.a * 255);
+	memset(software->front->data, compound.rgba, software->w * software->h * software->front->pixel_size);
 	return VL_SUCCESS;
 }
 
-static inline void draw_brush(VlSoftwarePixelBuffer *front, int cx, int cy, int radius, unsigned char *cl) {
+static inline void draw_brush(VlSoftwarePixelBuffer *front, int cx, int cy, int radius, VlRGBA color) {
+	if (radius <= 1) {
+		SET_PIXEL(front, cx, cy, color);
+		return;
+	}
 	int r2 = radius * radius;
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
 			if (dx * dx + dy * dy <= r2) {          // inside circle
-				int x = cx + dx;
-				int y = cy + dy;
-				if (x >= front->w || y >= front->h || x < 0 || y < 0) break; 
-				size_t __pixel_index = ((y)*front->row) + (x)*front->pixel_size; 
-				front->data[__pixel_index] = cl[0];
-				if (front->channels >= 2) front->data[__pixel_index + 1] = cl[1];
-				if (front->channels >= 3) front->data[__pixel_index + 2] = cl[2];
-				if (front->channels >= 4) front->data[__pixel_index + 3] = cl[3];
+				SET_PIXEL(front, cx + dx, cy + dy, color);
 			}
 		}
 	}
 }
 
-static inline unsigned char clamp255(int v) {
-	return (unsigned char)(v < 0 ? 0 : (v > 255 ? 255 : v));
+static inline unsigned char clamp255(int x) {
+	return (unsigned char) VL_CLAMP(x, 0, 255);
 }
 
-/* Blend a source colour into a destination pixel using a weight w∈[0,1] */
-static inline char blend_pixel(VlSoftwarePixelBuffer *front, int x, int y, unsigned char *src, double wb) {
+static inline char blend_pixel(VlSoftwarePixelBuffer *front, int x, int y, VlRGBA color, double wb) {
 	if (x < 0 || x >= front->w || y < 0 || y >= front->h) return 1;
 
 	size_t index = front->row * y + x * front->pixel_size;
 	unsigned char *dst = front->data + index;
 
-	unsigned char srcR = src[0];
-	unsigned char srcG = src[1];
-	unsigned char srcB = src[2];
-	unsigned char srcA = src[3];
-
-	unsigned char dstR = dst[0];
-	unsigned char dstG = dst[1];
-	unsigned char dstB = dst[2];
-	unsigned char dstA = dst[3];
-
-	/* simple “over” blend using the weight as alpha */
-	double a = wb * (srcA / 255.0);
+	double a = wb * color.a;
 	double inv = 1.0 - a;
 
-	unsigned char outA = clamp255((int)(a * srcA + inv * dstA));
-	unsigned char outR = clamp255((int)(a * srcR + inv * dstR));
-	unsigned char outG = clamp255((int)(a * srcG + inv * dstG));
-	unsigned char outB = clamp255((int)(a * srcB + inv * dstB));
+	VlRGBA res = VL_RGBA(
+		(a * color.r + inv * (dst[0] / 255.0f)),
+		(a * color.g + inv * (dst[1] / 255.0f)),
+		(a * color.b + inv * (dst[2] / 255.0f)),
+		(a * color.a + inv * (dst[3] / 255.0f))
+	);
 
-	front->data[index] = outR;
-	front->data[index + 1] = outG;
-	front->data[index + 2] = outB;
-	front->data[index + 3] = outA;
+	SET_PIXEL(front, x, y, res);
 
 	return 0;
 }
 
 static inline void draw_soft_brush(VlSoftwarePixelBuffer* front, int cx, int cy, int radius,
-	unsigned char *brush, double intensity) {
+	VlRGBA color, double intensity) {
+	if (radius <= 1) {
+		blend_pixel(front, cx, cy, color, intensity);
+		return;
+	}
 	int r2 = radius * radius;
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
@@ -137,18 +161,19 @@ static inline void draw_soft_brush(VlSoftwarePixelBuffer* front, int cx, int cy,
 			/* quadratic fall‑off: (1 - d/r)^2  */
 			double d = sqrt((double)dist2);
 			double w = 1.0 - d / radius;
-			w = w * w * intensity;                         // smooth edge
+			w = w * intensity;                         // smooth edge
 			if (w <= 0.0) continue;
 
-			if (blend_pixel(front, cx + dx, cy + dy, brush, w)) break;
+			if (blend_pixel(front, cx + dx, cy + dy, color, w)) break;
 		}
 	}
 }
 
-static VlResult vl_software_graphics_bresenham_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
+static VlResult vl_software_graphics_bresenham_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlGraphicsBrush brush, int thickness) {
 	VL_UNUSED(thickness);
-	if (!graphics) return VL_ERROR;
+	if (!graphics || !brush) return VL_ERROR;
 	VlSoftwareGraphics* software = (VlSoftwareGraphics*)graphics;
+	VlSoftwareBrush *sw_brush = (VlSoftwareBrush*) brush;
 	if (!software->front) return VL_ERROR;
 	int x1 = (int)p2.x;
 	int x0 = (int)p1.x;
@@ -156,7 +181,8 @@ static VlResult vl_software_graphics_bresenham_line(VlGraphics graphics, VlVec2 
 	int y0 = (int)p1.y;
 	if (!(x0 >= software->x1 && x0 <= software->x2) && !(y0 >= software->y1 && y0 <= software->y2) &&
 		!(x1 >= software->x1 && x1 <= software->x2) && !(y1 >= software->y1 && y1 <= software->y2)) return VL_SUCCESS;
-	int radius = thickness / 2;
+	VlRGBA sample = sw_brush->sample(brush, 0, 0);
+	int radius = thickness;
 	char steep = VL_ABS(y1 - y0) > VL_ABS(x1 - x0);
 	if (steep) {
 		/* swap x and y */
@@ -177,64 +203,38 @@ static VlResult vl_software_graphics_bresenham_line(VlGraphics graphics, VlVec2 
 	int ystep = (y0 < y1) ? 1 : -1;
 	int y = y0;
 
-	unsigned char cl[4];
-	cl[0] = (unsigned char)(brush.r * 255);
-	cl[1] = (unsigned char)(brush.g * 255);
-	cl[2] = (unsigned char)(brush.b * 255);
-	cl[3] = (unsigned char)(brush.a * 255);
+	if (steep) {
+		for (int x = x0; x <= x1; ++x) {
+			sample = sw_brush->sample(brush, 0, 0);
+			draw_brush(software->front, y, x, radius, sample);
 
-	if (radius == 0) {
-		if (steep) {
-			for (int x = x0; x <= x1; ++x) {
-				SET_PIXEL(software->front, y, x, brush);
-
-				err -= dy;
-				if (err < 0) {
-					y += ystep;
-					err += dx;
-				}
-			}
-		} else {
-			for (int x = x0; x <= x1; ++x) {
-				SET_PIXEL(software->front, x, y, brush);
-
-				err -= dy;
-				if (err < 0) {
-					y += ystep;
-					err += dx;
-				}
+			err -= dy;
+			if (err < 0) {
+				y += ystep;
+				err += dx;
 			}
 		}
 	} else {
-		if (steep) {
-			for (int x = x0; x <= x1; ++x) {
-				draw_brush(software->front, y, x, radius, cl);
+		for (int x = x0; x <= x1; ++x) {
+			sample = sw_brush->sample(brush, 0, 0);
+			draw_brush(software->front, x, y, radius, sample);
 
-				err -= dy;
-				if (err < 0) {
-					y += ystep;
-					err += dx;
-				}
-			}
-		} else {
-			for (int x = x0; x <= x1; ++x) {
-				draw_brush(software->front, x, y, radius, cl);
-
-				err -= dy;
-				if (err < 0) {
-					y += ystep;
-					err += dx;
-				}
+			err -= dy;
+			if (err < 0) {
+				y += ystep;
+				err += dx;
 			}
 		}
 	}
 	return VL_SUCCESS;
 }
 
-static VlResult vl_software_graphics_wu_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
+static VlResult vl_software_graphics_wu_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlGraphicsBrush brush, int thickness) {
 	if (!graphics) return VL_ERROR;
 	VlSoftwareGraphics* software = (VlSoftwareGraphics*)graphics;
+	VlSoftwareBrush *sw_brush = (VlSoftwareBrush*) brush;
 	if (!software->front) return VL_ERROR;
+	VlRGBA sample = sw_brush->sample(brush, 0, 0);
 	int x1 = (int)p2.x;
 	int x0 = (int)p1.x;
 	int y1 = (int)p2.y;
@@ -270,19 +270,13 @@ static VlResult vl_software_graphics_wu_line(VlGraphics graphics, VlVec2 p1, VlV
 	float alpha1 = (1.0f - fmodf(yend, 1.0f)) * xgap;
 	float alpha2 = fmodf(yend, 1.0f) * xgap;
 
-	unsigned char cl[4];
-	cl[0] = (unsigned char)(brush.r * 255);
-	cl[1] = (unsigned char)(brush.g * 255);
-	cl[2] = (unsigned char)(brush.b * 255);
-	cl[3] = (unsigned char)(brush.a * 255);
-
 	if (steep) {
-		draw_soft_brush(software->front, ypxl1, xpxl1, radius, cl, alpha1);
-		draw_soft_brush(software->front, ypxl1 + 1, xpxl1, radius, cl, alpha2);
+		draw_soft_brush(software->front, ypxl1, xpxl1, radius, sample, alpha1);
+		draw_soft_brush(software->front, ypxl1 + 1, xpxl1, radius, sample, alpha2);
 	}
 	else {
-		draw_soft_brush(software->front, xpxl1, ypxl1, radius, cl, alpha1);
-		draw_soft_brush(software->front, xpxl1, ypxl1 + 1, radius, cl, alpha2);
+		draw_soft_brush(software->front, xpxl1, ypxl1, radius, sample, alpha1);
+		draw_soft_brush(software->front, xpxl1, ypxl1 + 1, radius, sample, alpha2);
 	}
 
 	float intery = yend + gradient;   // first y-intersection for the main loop
@@ -296,53 +290,36 @@ static VlResult vl_software_graphics_wu_line(VlGraphics graphics, VlVec2 p1, VlV
 	alpha1 = (1.0f - fmodf(yend, 1.0f)) * xgap;
 	alpha2 = fmodf(yend, 1.0f) * xgap;
 
+	sample = sw_brush->sample(brush, 1, 0);
+
 	if (steep) {
-		draw_soft_brush(software->front, ypxl2, xpxl2, radius, cl, alpha1);
-		draw_soft_brush(software->front, ypxl2 + 1, xpxl2, radius, cl, alpha2);
+		draw_soft_brush(software->front, ypxl2, xpxl2, radius, sample, alpha1);
+		draw_soft_brush(software->front, ypxl2 + 1, xpxl2, radius, sample, alpha2);
 	}
 	else {
-		draw_soft_brush(software->front, xpxl2, ypxl2, radius, cl, alpha1);
-		draw_soft_brush(software->front, xpxl2, ypxl2 + 1, radius, cl, alpha2);
+		draw_soft_brush(software->front, xpxl2, ypxl2, radius, sample, alpha1);
+		draw_soft_brush(software->front, xpxl2, ypxl2 + 1, radius, sample, alpha2);
 	}
 
 	/* ---- main loop ---- */
-	if (radius == 0) {
-		if (steep) {
-			for (int x = xpxl1 + 1; x < xpxl2; ++x) {
-				int y = (int)intery;
-				float f = intery - y;               /* fractional part */
-				blend_pixel(software->front, y, x, cl, 1.0f - f);
-				blend_pixel(software->front, y + 1, x, cl, f);
-				intery += gradient;
-			}
+	if (steep) {
+		for (int x = xpxl1 + 1; x < xpxl2; ++x) {
+			int y = (int)intery;
+			float f = intery - y;               /* fractional part */
+			sample = sw_brush->sample(brush, 0, 0);
+			draw_soft_brush(software->front, y, x, radius, sample, 1.0f - f);
+			draw_soft_brush(software->front, y + 1, x, radius, sample, f);
+			intery += gradient;
 		}
-		else {
-			for (int x = xpxl1 + 1; x < xpxl2; ++x) {
-				int y = (int)intery;
-				float f = intery - y;
-				blend_pixel(software->front, x, y, cl, 1.0f - f);
-				blend_pixel(software->front, x, y + 1, cl, f);
-				intery += gradient;
-			}
-		}
-	} else {
-		if (steep) {
-			for (int x = xpxl1 + 1; x < xpxl2; ++x) {
-				int y = (int)intery;
-				float f = intery - y;               /* fractional part */
-				draw_soft_brush(software->front, y, x, radius, cl, 1.0f - f);
-				draw_soft_brush(software->front, y + 1, x, radius, cl, f);
-				intery += gradient;
-			}
-		}
-		else {
-			for (int x = xpxl1 + 1; x < xpxl2; ++x) {
-				int y = (int)intery;
-				float f = intery - y;
-				draw_soft_brush(software->front, x, y, radius, cl, 1.0f - f);
-				draw_soft_brush(software->front, x, y + 1, radius, cl, f);
-				intery += gradient;
-			}
+	}
+	else {
+		for (int x = xpxl1 + 1; x < xpxl2; ++x) {
+			int y = (int)intery;
+			float f = intery - y;
+			sample = sw_brush->sample(brush, 0, 0);
+			draw_soft_brush(software->front, x, y, radius, sample, 1.0f - f);
+			draw_soft_brush(software->front, x, y + 1, radius, sample, f);
+			intery += gradient;
 		}
 	}
 
@@ -351,11 +328,11 @@ static VlResult vl_software_graphics_wu_line(VlGraphics graphics, VlVec2 p1, VlV
 
 
 
-VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness) {
+VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlGraphicsBrush brush, int thickness) {
 	return
 		graphics->antialias == VL_GRAPHICS_ANTIALIASING_ON
 		? vl_software_graphics_wu_line(graphics, p1, p2, brush, thickness)
-		: vl_software_graphics_bresenham_line(graphics, p1, p2, brush, thickness);
+	    : vl_software_graphics_bresenham_line(graphics, p1, p2, brush, thickness);
 }
 
 VlResult vl_software_graphics_end(VlGraphics graphics) {

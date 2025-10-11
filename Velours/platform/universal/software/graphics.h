@@ -28,13 +28,31 @@ typedef struct {
 	int w, h;
 } VlSoftwareGraphics;
 
+struct VlSoftwareBrush;
+
+typedef VlRGBA(*VlGraphicsBrushSampleFunction)(VlGraphicsBrush, float, float);
+
+typedef struct {
+	struct VlGraphicsBrush base;
+
+	VlGraphicsBrushSampleFunction sample;
+} VlSoftwareBrush;
+
+typedef struct {
+	VlSoftwareBrush base;
+	VlRGBA color;
+} VlSoftwareBrushSolid;
+
 VlResult vl_software_graphics_initialize(void);
 
 VlResult vl_software_graphics_set_antialiasing_mode(VlGraphics graphics, VlGraphicsAntialiasingMode mode);
 
+VlGraphicsBrush vl_software_graphics_brush_solid_new(VlGraphics graphics, VlRGBA rgba);
+VlResult vl_software_graphics_brush_free(VlGraphicsBrush brush);
+
 VlResult vl_software_graphics_begin(VlGraphics graphics);
 VlResult vl_software_graphics_clear(VlGraphics graphics, VlRGBA rgba);
-VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness);
+VlResult vl_software_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlGraphicsBrush brush, int thickness);
 VlResult vl_software_graphics_end(VlGraphics graphics);
 
 VlResult vl_software_graphics_terminate(void);

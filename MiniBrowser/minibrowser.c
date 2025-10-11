@@ -164,10 +164,11 @@ static VlGraphics s_graphics;
 
 void resize(VlWindow window) {
     vl_graphics_resize(s_graphics, window->cw, window->ch);
-    vl_window_invalidate_region(s_window, 0, 0, 0, 0);
+    vl_window_invalidate_region(s_window, window->cw / 4, 0, window->w / 2 + window->cw / 4, window->ch);
 }
 
 float angle_offset = 0;
+VlGraphicsBrush s_yellow_brush;
 
 void paint(VlWindow window) {
     VL_UNUSED(window);
@@ -182,7 +183,7 @@ void paint(VlWindow window) {
     int radius = window->ch / 2;
 
     for (int i = 0; i < LINES; i++) {
-        vl_graphics_line(s_graphics, VL_VEC2(window->cw / 2, window->ch / 2), VL_VEC2(window->cw / 2 + radius * sin((float) i / LINES * M_PI * 2 + angle_offset), window->ch / 2 + radius * cos((float) i / LINES * M_PI * 2 + angle_offset)), VL_RGBA(1, 1, 1, 1), 1);
+        vl_graphics_line(s_graphics, VL_VEC2(window->cw / 2, window->ch / 2), VL_VEC2(window->cw / 2 + radius * sin((float) i / LINES * M_PI * 2 + angle_offset), window->ch / 2 + radius * cos((float) i / LINES * M_PI * 2 + angle_offset)), s_yellow_brush, 1);
     }
 
     vl_graphics_end(s_graphics);
@@ -221,6 +222,7 @@ void window_test(void) {
         printf("failed to create graphics!\n");
         return;
     }
+    s_yellow_brush = vl_graphics_brush_solid_new(s_graphics, VL_RGBA(0, 1, 1, 1));
 
     vl_window_set_paint_function(s_window, paint);
     vl_window_set_resize_function(s_window, resize);
@@ -235,6 +237,7 @@ void window_test(void) {
     vl_window_message_loop(s_window);
 
     vl_timer_free(draw_timer);
+    vl_graphics_brush_free(s_yellow_brush);
     vl_graphics_free(s_graphics);
     vl_window_free(s_window);
 

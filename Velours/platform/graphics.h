@@ -34,38 +34,41 @@ struct VlGraphics {
 
 typedef struct VlGraphics* VlGraphics;
 
-typedef void* VlGraphicsBrushHandle;
-
 typedef enum {
 	VL_GRAPHICS_BRUSH_SOLID = 0,
 	VL_GRAPHICS_BRUSH_COUNT
 } VlGraphicsBrushType;
 
-typedef struct {
+struct VlGraphicsBrush {
 	// pointer to the owner of the brush
 	VlGraphics owner;
 
 	// brush type, for now only solid brushes are supported
 	// but in future we may add linear gradients and so on
 	VlGraphicsBrushType type;
+};
 
-	// pointer to platform-specific brush data
-	VlGraphicsBrushHandle handle;
-} VlGraphicsBrush;
+typedef struct VlGraphicsBrush* VlGraphicsBrush;
 
 typedef VlResult (*VlGraphicsInitializeFunction)(void);
 typedef VlGraphics (*VlGraphicsNewFunction)(VlWindow);
 
+typedef VlGraphicsBrush (*VlGraphicsBrushSolidNewFunction)(VlGraphics, VlRGBA);
+
 typedef VlResult (*VlGraphicsPresentationBeginFunction)(VlGraphics);
-typedef VlResult(*VlGraphicsSetAntialiasingModeFunction)(VlGraphics, VlGraphicsAntialiasingMode);
+
+typedef VlResult (*VlGraphicsSetAntialiasingModeFunction)(VlGraphics, VlGraphicsAntialiasingMode);
+
 typedef VlResult (*VlGraphicsBeginFunction)(VlGraphics);
 typedef VlResult (*VlGraphicsClearFunction)(VlGraphics, VlRGBA);
-typedef VlResult(*VlGraphicsLineFunction)(VlGraphics, VlVec2, VlVec2, VlRGBA, int);
+typedef VlResult (*VlGraphicsLineFunction)(VlGraphics, VlVec2, VlVec2, VlGraphicsBrush, int);
 typedef VlResult (*VlGraphicsEndFunction)(VlGraphics);
+
 typedef VlResult (*VlGraphicsPresentationEndFunction)(VlGraphics);
 
 typedef VlResult (*VlGraphicsResizeFunction)(VlGraphics, int, int);
 
+typedef VlResult (*VlGraphicsBrushFreeFunction)(VlGraphicsBrush);
 typedef VlResult (*VlGraphicsFreeFunction)(VlGraphics);
 typedef VlResult (*VlGraphicsTerminateFunction)(void);
 
@@ -80,8 +83,8 @@ VL_API VlResult vl_graphics_initialize(VlGraphicsBackend backend);
 VL_API VlGraphics vl_graphics_new(VlWindow window);
 VL_API VlResult vl_graphics_free(VlGraphics graphics);
 
-VL_API VlResult vl_graphics_brush_new_solid(VlGraphics graphics, VlGraphicsBrush *brush, VlRGBA rgba);
-VL_API void vl_graphics_brush_free(VlGraphicsBrush* brush);
+VL_API VlGraphicsBrush vl_graphics_brush_solid_new(VlGraphics graphics, VlRGBA rgba);
+VL_API VlResult vl_graphics_brush_free(VlGraphicsBrush brush);
 
 VL_API VlResult vl_graphics_resize(VlGraphics graphics, int w, int h);
 
@@ -100,7 +103,7 @@ VL_API VlResult vl_graphics_set_antialiasing_mode(VlGraphics graphics, VlGraphic
 //     vl_graphics_end(some_graphics);
 VL_API VlResult vl_graphics_begin(VlGraphics graphics);
 VL_API VlResult vl_graphics_clear(VlGraphics graphics, VlRGBA rgba);
-VL_API VlResult vl_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlRGBA brush, int thickness);
+VL_API VlResult vl_graphics_line(VlGraphics graphics, VlVec2 p1, VlVec2 p2, VlGraphicsBrush brush, int thickness);
 VL_API VlResult vl_graphics_draw_rectangle(VlGraphics graphics, VlGraphicsBrush *brush, VlRect rect, float stroke_width);
 VL_API VlResult vl_graphics_fill_rectangle(VlGraphics graphics, VlGraphicsBrush* brush, VlRect rect);
 
