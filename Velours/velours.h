@@ -58,16 +58,6 @@
 
 #define VL_LOG_ERROR(...) fprintf(stderr, __FILE__ "(" VL_STRINGIFY_EXPAND(__LINE__) "): " __VA_ARGS__)
 
-#ifdef WIN
-#include <Windows.h>
-
-#define VL_HRESULT_CALL(CALL) \
-	do { \
-		if (!SUCCEEDED(CALL)) \
-			fprintf(stderr, __FILE__ "(" VL_STRINGIFY_EXPAND(__LINE__) " ): HRESULT failed!\n"); \
-	} while (0)
-#endif // WIN
-
 typedef char VlResult;
 
 typedef char	 u8;
@@ -78,5 +68,12 @@ typedef uint64_t u64;
 typedef short i16;
 typedef int i32;
 typedef int64_t i64;
+
+// u8 *vl_format(const u8 *format, ...)
+// automatically allocates memory and snprintf's into it
+// NOTICE:
+//     after you're done with the string vl_format returns
+//     free it using VL_FREE macro, otherwise you're going to leak memory!
+VL_API u8 *vl_format(const u8 *format, ...);
 
 #endif

@@ -3,6 +3,8 @@
 
 #include "platform/timer.h"
 
+#include <Windows.h>
+
 typedef struct {
 	struct VlTimer base;
 	HANDLE h;

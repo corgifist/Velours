@@ -9,6 +9,7 @@
 #include "platform/graphics.h"
 #include "platform/main.h"
 #include "platform/timer.h"
+#include "geometry.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -159,6 +160,7 @@ static VlWindow s_window;
 static VlGraphics s_graphics;
 
 #define LINES 50
+#define TITLE "Windows Test"
 
 void resize(VlWindow window) {
     vl_graphics_resize(s_graphics, window->cw, window->ch);
@@ -169,7 +171,7 @@ float angle_offset = 0;
 
 void paint(VlWindow window) {
     VL_UNUSED(window);
-    // u64 start = vl_timer_get_milliseconds();
+    u64 start = vl_timer_get_milliseconds();
     vl_graphics_presentation_begin(s_graphics);
 
     vl_graphics_set_antialiasing_mode(s_graphics, VL_GRAPHICS_ANTIALIASING_ON);
@@ -180,13 +182,16 @@ void paint(VlWindow window) {
     int radius = window->ch / 2;
 
     for (int i = 0; i < LINES; i++) {
-        vl_graphics_line(s_graphics, VL_VEC2(window->cw / 2, window->ch / 2), VL_VEC2(window->cw / 2 + radius * sin((float) i / LINES * VL_PI * 2 + angle_offset), window->ch / 2 + radius * cos((float) i / LINES * VL_PI * 2 + angle_offset)), VL_RGBA(1, 1, 1, 1), 1);
+        vl_graphics_line(s_graphics, VL_VEC2(window->cw / 2, window->ch / 2), VL_VEC2(window->cw / 2 + radius * sin((float) i / LINES * M_PI * 2 + angle_offset), window->ch / 2 + radius * cos((float) i / LINES * M_PI * 2 + angle_offset)), VL_RGBA(1, 1, 1, 1), 1);
     }
 
     vl_graphics_end(s_graphics);
     vl_graphics_presentation_end(s_graphics);
-    // u64 end = vl_timer_get_milliseconds();
-    // printf("%zu - %zu = %zu ms\n", end, start, end - start);
+    u64 end = vl_timer_get_milliseconds();
+    
+    u8* new_title = vl_format("%s - %zums, %0.2f FPS", TITLE, end - start, 1000.0f / (float) (end - start));
+    vl_window_set_title(s_window, new_title);
+    VL_FREE(new_title);
 }
 
 #define DESIRED_FPS 120
@@ -278,7 +283,7 @@ int main(int argc, char **argv) {
     }
     printf("\n");
 	SetConsoleOutputCP(CP_UTF8);
-    vl_memory_set_logging_level(VL_MEMORY_ALL);
+    vl_memory_set_logging_level(VL_MEMORY_ONLY_ERRORS);
 
 	// da_test();
     // ht_test();

@@ -60,7 +60,11 @@ VlResult vl_software_graphics_clear(VlGraphics graphics, VlRGBA color) {
 	if (!software->front) return VL_ERROR;
 	for (int y = software->y1; y < software->y2; y++) {
 		for (int x = software->x1; x < software->x2; x++) {
-			SET_PIXEL(software->front, x, y, color);
+			size_t __pixel_index = ((y) * software->front->row) + (x) * software->front->pixel_size;
+			software->front->data[__pixel_index] = (u8)(color.r * 255);
+			if (software->front->channels >= 2) software->front->data[__pixel_index + 1] = (u8) (color.g * 255);
+			if (software->front->channels >= 3) software->front->data[__pixel_index + 2] = (u8) (color.b * 255);
+			if (software->front->channels >= 4) software->front->data[__pixel_index + 3] = (u8) (color.a * 255);
 		}
 	}
 	return VL_SUCCESS;

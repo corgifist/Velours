@@ -1,4 +1,4 @@
-#include "math.h"
+#include "geometry.h"
 
 VlVec2 vl_math_line_line_intersection(VlVec2 p1, VlVec2 p2, VlVec2 p3, VlVec2 p4) {
 	VlVec2 res = { .x = (float) VL_MATH_NO_RESULT, .y = (float) VL_MATH_NO_RESULT };

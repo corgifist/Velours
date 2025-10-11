@@ -51,6 +51,7 @@ VlGraphics vl_software_graphics_win_new(VlWindow window) {
 
 VlResult vl_software_graphics_win_resize(VlGraphics graphics, int w, int h) {
 	VlSoftwareGraphics *software = (VlSoftwareGraphics*) graphics;
+	if (w * h < software->w * software->h) return VL_SUCCESS;
 	VlSoftwarePixelBuffer *new_buffer = (VlSoftwarePixelBuffer*) vl_presentation_buffer_new(w, h, 4, 1);
 	/*memcpy(new_buffer->data, software->front->data, VL_MIN(
 		new_buffer->h * new_buffer->row, 

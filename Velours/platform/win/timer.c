@@ -160,5 +160,5 @@ VL_API u64 vl_timer_get_milliseconds(void) {
 	LARGE_INTEGER li, freq;
 	QueryPerformanceFrequency(&freq);
 	QueryPerformanceCounter(&li);
-	return li.QuadPart / freq.QuadPart;
+	return li.QuadPart * 1000 / freq.QuadPart;
 }

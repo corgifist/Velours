@@ -69,6 +69,16 @@ VL_API VlWindow vl_window_new(const u8* title, int x, int y, int w, int h) {
 	return (VlWindow) window;
 }
 
+VL_API VlResult vl_window_set_title(VlWindow window, const u8 *title) {
+	VL_DA(u16) title16 = utf8_to_utf16(title);
+	if (!SetWindowText(((VlWinWindow*)window)->hwnd, title16)) {
+		VL_DA_FREE(title16);
+		return VL_ERROR;
+	}
+	VL_DA_FREE(title16);
+	return VL_SUCCESS;
+}
+
 VL_API void vl_window_set_visible(VlWindow window, char visible) {
 	VlWinInstance *instance = (VlWinInstance*) vl_instance_get();
 	if (!instance) {

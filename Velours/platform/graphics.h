@@ -7,7 +7,7 @@
 
 #include "velours.h"
 #include "window.h"
-#include "math.h"
+#include "geometry.h"
 
 #define VL_GRAPHICS_SHOULD_TERMINATE 8
 

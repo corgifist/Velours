@@ -21,6 +21,8 @@ typedef void (*VlWindowResizeFunction)(VlWindow);
 typedef void (*VlWindowMoveFunction)(VlWindow);
 
 VL_API VlWindow vl_window_new(const u8 *title, int x, int y, int w, int h);
+VL_API VlResult vl_window_set_title(VlWindow window, const u8 *title);
+
 VL_API void vl_window_set_visible(VlWindow window, char visible);
 VL_API void vl_window_set_paint_function(VlWindow window, VlWindowPaintFunction fn);
 VL_API void vl_window_set_resize_function(VlWindow window, VlWindowResizeFunction fn);

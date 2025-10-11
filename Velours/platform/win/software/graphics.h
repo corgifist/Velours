@@ -9,6 +9,8 @@
 // for VlWindow definition
 #include "platform/window.h"
 
+#include <Windows.h>
+
 typedef struct {
 	VlSoftwarePixelBuffer base;
 	HBITMAP hbmp;

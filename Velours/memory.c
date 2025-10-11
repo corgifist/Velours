@@ -29,7 +29,7 @@ VL_API void *vl_malloc(const char *file, size_t line, size_t size) {
 	if (!size) return NULL;
 	if (s_level >= VL_MEMORY_ALL) printf("%s(%zu): vl_malloc(%zu)", file, line, size);
 	struct VlAllocInfo* res = malloc(size + sizeof(struct VlAllocInfo));
-	printf(", %p\n", res);
+	if (s_level >= VL_MEMORY_ALL) printf(", %p\n", res);
 	if (res) {
 		s_allocated += size;
 		s_allocations++;
@@ -56,7 +56,7 @@ VL_API void *vl_realloc(const char *file, size_t line, void *mem, size_t new_siz
 		exit(1);
 	}
 	struct VlAllocInfo* res = realloc(old_info, new_size + sizeof(struct VlAllocInfo));
-	printf(", %p\n", res);
+	if (s_level >= VL_MEMORY_ALL) printf(", %p\n", res);
 	if (res) {
 		s_allocated += new_size - old_size;
 
